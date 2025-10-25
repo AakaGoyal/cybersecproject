@@ -234,7 +234,6 @@ if st.session_state.page == "Landing":
     s2.info("**2. See results**\nClear traffic-light summary with context.")
     s3.info("**3. Act**\nTop-5 actions aligned to recognised control families.")
 
-    )
     st.markdown("---")
     if st.button("Start ➜", type="primary"):
         next_page("Initial 1")
