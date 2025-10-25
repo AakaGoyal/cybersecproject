@@ -32,7 +32,6 @@ st.markdown("""
 EMPLOYEE_RANGES = ["1–5", "6–10", "10–25", "26–50", "51–100", "More than 100"]
 YEARS_OPTIONS   = ["<1 year", "1–3 years", "3–5 years", "5–10 years", "10+ years"]
 
-# Industry select (can be extended)
 INDUSTRY_OPTIONS = [
     "Retail & Hospitality",
     "Professional / Consulting / Legal / Accounting",
@@ -45,7 +44,6 @@ INDUSTRY_OPTIONS = [
 
 WORK_MODE = ["Local & in-person", "Online / remote", "A mix of both"]
 
-# Turnover dropdown (100k bands up to €1M, then wider bands)
 TURNOVER_OPTIONS = [
     "<€100k",
     "€100k–€200k", "€200k–€300k", "€300k–€400k", "€400k–€500k",
@@ -65,7 +63,7 @@ defaults = {
     "employee_range": EMPLOYEE_RANGES[0],
     "turnover_label": TURNOVER_OPTIONS[0],
     "work_mode": WORK_MODE[0],
-    # Step 2 – answers
+    # Step 2 – answers (keys are owned by widgets on Step 2)
     "bp_it_manager": "",
     "bp_inventory": "",
     "bp_byod": "",
@@ -79,7 +77,6 @@ defaults = {
 for k, v in defaults.items():
     st.session_state.setdefault(k, v)
 
-# Convenience
 def next_page(name: str):
     st.session_state.page = name
     st.rerun()
@@ -95,7 +92,6 @@ def ui_progress(step:int, total:int=3, text:str=""):
         st.markdown(f'<span class="pill">Step {step} of {total}</span>  {text}', unsafe_allow_html=True)
 
 def profile_snapshot(compact:bool=True):
-    """Single source for snapshot, to avoid repetition."""
     if compact:
         st.markdown(
             f'<div class="snap">'
@@ -131,26 +127,20 @@ def section1_complete():
 def section2_complete():
     return all(st.session_state.get(k) for k in ["df_website","df_https","df_email","df_social","df_review"])
 
-# Simple overall dependency level based on answers
 def digital_dependency_level():
     score = 0
-    # online exposure
     if st.session_state.df_website == "Yes":
         score += 1
         if st.session_state.df_https == "No":
             score += 1
-    # email practice
     if st.session_state.df_email == "No":
         score += 2
     elif st.session_state.df_email == "Partially":
         score += 1
-    # BYOD increases risk
     if st.session_state.bp_byod in ("Yes", "Sometimes"):
         score += 1
-    # sensitive data increases impact
     if st.session_state.bp_sensitive == "Yes":
         score += 1
-    # map to level
     if score <= 1:
         return ("Low", "🟢")
     if score <= 3:
@@ -159,12 +149,10 @@ def digital_dependency_level():
 
 def summary_highlights_and_blindspots():
     hi, bs = [], []
-    # highlights
     if st.session_state.df_https == "Yes":
         hi.append("Website uses HTTPS (encrypted traffic).")
     if st.session_state.bp_inventory in ("Yes", "Partially"):
         hi.append("You keep a device list (even partial helps).")
-    # blind spots
     if st.session_state.df_email == "No":
         bs.append("Personal email in use — move to business email to cut phishing risk.")
     if st.session_state.bp_byod in ("Yes", "Sometimes"):
@@ -272,45 +260,45 @@ elif st.session_state.page == "Initial 2":
     with st.expander("🧭 Section 1 — Business profile (4 questions)" + (" ✓" if not s1_open else ""), expanded=s1_open):
         st.markdown("**Q1. 🖥️ Who looks after your IT day-to-day?**")
         st.caption("_By IT we mean the stuff your business relies on: laptops/phones, Wi-Fi, email, website, point-of-sale, cloud apps (Google/Microsoft), file storage/backup. Who keeps these running and secure?_")
-        st.session_state.bp_it_manager = st.radio(" ", ["Self-managed", "Outsourced IT", "Shared responsibility", "Not sure"],
-                                                  key="bp_it_manager", label_visibility="collapsed")
+        st.radio(" ", ["Self-managed", "Outsourced IT", "Shared responsibility", "Not sure"],
+                 key="bp_it_manager", label_visibility="collapsed")
 
         st.markdown("**Q2. 📋 Do you keep a simple list of company devices (laptops, phones, servers)?**")
         st.caption("_Helps find forgotten or unmanaged gear._")
-        st.session_state.bp_inventory = st.radio(" ", ["Yes", "Partially", "No", "Not sure"],
-                                                 key="bp_inventory", label_visibility="collapsed")
+        st.radio(" ", ["Yes", "Partially", "No", "Not sure"],
+                 key="bp_inventory", label_visibility="collapsed")
 
         st.markdown("**Q3. 📱 Do people use personal devices for work (BYOD)?**")
         st.caption("_Example: staff reading work email on a personal phone or laptop._")
-        st.session_state.bp_byod = st.radio(" ", ["Yes", "Sometimes", "No", "Not sure"],
-                                            key="bp_byod", label_visibility="collapsed")
+        st.radio(" ", ["Yes", "Sometimes", "No", "Not sure"],
+                 key="bp_byod", label_visibility="collapsed")
 
         st.markdown("**Q4. 🔐 Do you handle sensitive customer or financial data?**")
         st.caption("_Examples: payment details, personal records, contracts._")
-        st.session_state.bp_sensitive = st.radio(" ", ["Yes", "No", "Not sure"],
-                                                 key="bp_sensitive", label_visibility="collapsed")
+        st.radio(" ", ["Yes", "No", "Not sure"],
+                 key="bp_sensitive", label_visibility="collapsed")
 
     s2_open = not section2_complete()
     with st.expander("🌐 Section 2 — Digital footprint (5 questions)" + (" ✓" if not s2_open else ""), expanded=s2_open):
         st.markdown("**Q5. 🕸️ Do you have a public website?**")
         st.caption("_Helps assess potential online entry points._")
-        st.session_state.df_website = st.radio(" ", ["Yes", "No"], key="df_website", label_visibility="collapsed")
+        st.radio(" ", ["Yes", "No"], key="df_website", label_visibility="collapsed")
 
         st.markdown("**Q6. 🔒 Is your website HTTPS (padlock in the browser)?**")
         st.caption("_Encrypts traffic and builds trust with visitors._")
-        st.session_state.df_https = st.radio(" ", ["Yes", "No", "Not sure"], key="df_https", label_visibility="collapsed")
+        st.radio(" ", ["Yes", "No", "Not sure"], key="df_https", label_visibility="collapsed")
 
         st.markdown("**Q7. ✉️ Do you use business email addresses (e.g., info@yourcompany.com)?**")
         st.caption("_Personal Gmail/Yahoo accounts increase phishing risk._")
-        st.session_state.df_email = st.radio(" ", ["Yes", "Partially", "No"], key="df_email", label_visibility="collapsed")
+        st.radio(" ", ["Yes", "Partially", "No"], key="df_email", label_visibility="collapsed")
 
         st.markdown("**Q8. 📣 Is your business active on social media (LinkedIn, Instagram, etc.)?**")
         st.caption("_Helps gauge your brand’s visibility online._")
-        st.session_state.df_social = st.radio(" ", ["Yes", "No"], key="df_social", label_visibility="collapsed")
+        st.radio(" ", ["Yes", "No"], key="df_social", label_visibility="collapsed")
 
         st.markdown("**Q9. 🔎 Do you regularly check what’s public about the company or staff online?**")
         st.caption("_E.g., contact details, staff lists, screenshots that reveal systems._")
-        st.session_state.df_review = st.radio(" ", ["Yes", "Sometimes", "No"], key="df_review", label_visibility="collapsed")
+        st.radio(" ", ["Yes", "Sometimes", "No"], key="df_review", label_visibility="collapsed")
 
     st.markdown("---")
     b1, b2 = st.columns([1,1])
