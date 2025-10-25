@@ -146,47 +146,96 @@ def validate_initial1():
 # -----------------------------
 # PAGES
 # -----------------------------
-# ===== Landing (professional hero with preview, trust cues, dual CTAs) =====
+# ===== Landing (refined, professional) =====
 if st.session_state.page == "Landing":
-    # light CSS for spacing/typography without heavy theming
     st.markdown("""
     <style>
-      .container {max-width: 1100px; margin: 0 auto;}
-      .hero h1 {font-size: 2.2rem; line-height: 1.15; margin: 0 0 .5rem;}
-      .sub {font-size: 1.15rem; color: #444; margin-bottom: .75rem;}
-      .muted {color:#666;}
-      .lock {display:inline-flex; align-items:center; gap:.4rem; font-size:.95rem; color:#375; background:#EAF6EE; padding:.35rem .55rem; border-radius:8px;}
-      .grid {display:grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap:12px; margin-top:18px;}
-      .card {background: #fff; border:1px solid #eee; border-radius:14px; padding:12px 14px;}
-      .preview {background:#fff; border:1px solid #eee; border-radius:16px; padding:16px;}
-      .badge {display:inline-flex; align-items:center; gap:.4rem; padding:.2rem .5rem; border-radius:999px; font-size:.9rem;}
-      .badge.low{background:#E9F7EF} .badge.med{background:#FFF8E1} .badge.high{background:#FFEBEE}
-      .section-title {font-weight:700; font-size:1.25rem; margin:24px 0 8px;}
-      @media (max-width: 980px){
-        .grid {grid-template-columns: 1fr 1fr;}
+      :root{
+        --brand:#2563eb;           /* primary (accessible blue) */
+        --brand-press:#1e4fc0;     /* pressed state */
+        --text:#111827;
+        --muted:#6b7280;
+        --bg-hero:#f7f7fb;
+        --card-b:#e5e7eb;
       }
+      .wrap{max-width:1100px;margin:0 auto;}
+      .hero{
+        background:var(--bg-hero);
+        border-radius:16px;
+        padding:28px 28px 20px;
+        border:1px solid #eef0f6;
+      }
+      .h1{font-size:2.4rem; line-height:1.15; font-weight:800; color:var(--text); margin:.2rem 0 .6rem;}
+      .sub{font-size:1.1rem; color:var(--muted); margin-bottom:1rem; max-width:65ch;}
+      .ctas{display:grid; grid-template-columns:1fr 1fr; gap:12px; max-width:520px}
+      .btn{
+        display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
+        padding:.85rem 1rem; border-radius:10px; border:1px solid var(--brand);
+        background:var(--brand); color:white; font-weight:600; text-decoration:none;
+      }
+      .btn:hover{background:var(--brand-press); border-color:var(--brand-press)}
+      .btn-secondary{
+        border:1px solid var(--card-b); background:#fff; color:var(--text); font-weight:600;
+      }
+      .btn-secondary:hover{border-color:#cfd3da; background:#fafafa}
+      .trust{
+        display:inline-flex; align-items:center; gap:.45rem;
+        margin-top:.6rem; padding:.35rem .6rem; border-radius:999px;
+        background:#e7f5ee; color:#0f5132; font-size:.95rem; border:1px solid #c7e9d7;
+      }
+
+      .grid{
+        display:grid; gap:12px; margin-top:16px;
+        grid-template-columns:repeat(4,minmax(0,1fr));
+      }
+      .card{
+        background:#fff; border:1px solid var(--card-b); border-radius:14px; padding:12px 14px;
+        font-weight:600;
+      }
+
+      .preview{
+        background:#fff; border:1px solid var(--card-b); border-radius:16px; padding:16px 18px;
+        box-shadow:0 8px 28px rgba(17,24,39,.05);
+      }
+      .badge{display:inline-flex; gap:.45rem; align-items:center; padding:.25rem .6rem;
+             border-radius:999px; background:#fef9c3; font-weight:600}
+      .muted{color:var(--muted)}
+      .how{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px;}
+      .step{background:#eef2ff; border:1px solid #e0e7ff; padding:14px; border-radius:12px;}
+      @media (max-width:980px){
+        .cols{display:block}
+        .ctas{grid-template-columns:1fr}
+        .grid{grid-template-columns:1fr 1fr}
+        .how{grid-template-columns:1fr}
+      }
+      /* keyboard focus for accessibility */
+      .btn:focus, .btn-secondary:focus{outline:3px solid #93c5fd; outline-offset:2px}
     </style>
     """, unsafe_allow_html=True)
 
-    # HERO
-    hero_left, hero_right = st.columns([7,5], gap="large")
-    with hero_left:
-        st.markdown('<div class="hero">', unsafe_allow_html=True)
+    st.markdown('<div class="wrap">', unsafe_allow_html=True)
+
+    # HERO band (two columns)
+    st.markdown('<div class="hero">', unsafe_allow_html=True)
+    left, right = st.columns([7,5], gap="large")
+
+    with left:
         st.markdown("### 🛡️ SME Cybersecurity Self-Assessment", unsafe_allow_html=True)
-        st.markdown('<h1 class="h1">Assess · Understand · Act — in under 15 minutes.</h1>', unsafe_allow_html=True)
+        st.markdown('<div class="h1">Assess · Understand · Act — in under 15 minutes.</div>', unsafe_allow_html=True)
         st.markdown(
-            '<p class="sub">A plain-language self-assessment that shows your exposure and the <strong>top actions to take next</strong>. '
-            'Lightweight but <em>traceable</em> to recognised standards (NIST CSF 2.0, ISO 27001:2022).</p>',
-            unsafe_allow_html=True
+            '<div class="sub">A plain-language self-assessment that shows your exposure and the '
+            '<strong>top actions to take next</strong>. Lightweight but <em>traceable</em> to recognised '
+            'standards (NIST CSF 2.0, ISO 27001:2022).</div>', unsafe_allow_html=True
         )
 
-        cta1, cta2 = st.columns([1,1])
-        with cta1:
-            if st.button("Start self-assessment ➜", type="primary", use_container_width=True):
+        st.markdown('<div class="ctas">', unsafe_allow_html=True)
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("🚀 Start self-assessment", key="cta_start", type="primary", use_container_width=True):
                 st.session_state.page = "Initial 1"; st.rerun()
-        with cta2:
-            if st.button("See sample results", use_container_width=True):
-                # seed demo data and jump to Summary
+        with c2:
+            if st.button("👀 Preview sample summary", key="cta_demo", use_container_width=True):
+                # Seed demo data then jump to Summary
                 st.session_state.person_name = "Demo User"
                 st.session_state.company_name = "Sample Co."
                 st.session_state.sector_label = "Retail & Hospitality"
@@ -204,35 +253,40 @@ if st.session_state.page == "Landing":
                 st.session_state.df_social = "Yes"
                 st.session_state.df_review = "Sometimes"
                 st.session_state.page = "Summary"; st.rerun()
-
-        st.markdown('<div class="lock">🔒 No sign-up. Answers stay on this device.</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-        st.markdown('<div class="section-title">Why this works</div>', unsafe_allow_html=True)
+        st.markdown('<div class="trust">🔒 No sign-up. Answers stay on this device.</div>', unsafe_allow_html=True)
+
+        st.markdown('<h4 style="margin:22px 0 8px;">Why this works</h4>', unsafe_allow_html=True)
         st.markdown('<div class="grid">', unsafe_allow_html=True)
         st.markdown('<div class="card">✅ Plain-language questions</div>', unsafe_allow_html=True)
         st.markdown('<div class="card">📎 Traceable to NIST/ISO</div>', unsafe_allow_html=True)
-        st.markdown('<div class="card">⚡ Lightweight, 10–15 minutes</div>', unsafe_allow_html=True)
+        st.markdown('<div class="card">⚡ 10–15 minutes</div>', unsafe_allow_html=True)
         st.markdown('<div class="card">🧪 Safe demos of common scams</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    with hero_right:
+    with right:
         st.markdown('<div class="preview">', unsafe_allow_html=True)
         st.caption("Preview of your summary")
-        st.markdown('<span class="badge med">🟡 Overall: Medium dependency</span>', unsafe_allow_html=True)
+        st.markdown('<span class="badge">🟡 Overall: Medium dependency</span>', unsafe_allow_html=True)
         st.write("**Highlights**")
-        st.write("• Website uses HTTPS\n\n• Device list exists (partial)")
+        st.write("• Website uses HTTPS  \n• Device list exists (partial)")
         st.write("**Potential blind spots**")
-        st.write("• Personal email in use → move to business email\n• BYOD needs MFA + clear rules")
+        st.write("• Personal email in use → move to business email  \n• BYOD needs MFA + clear rules")
         st.markdown('<div class="muted">Mapped to: NIST CSF PR.AC, PR.DS · ISO 27001 A.5, A.8</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # HOW IT WORKS
-    st.markdown('<div class="section-title">How it works</div>', unsafe_allow_html=True)
-    s1, s2, s3 = st.columns(3)
-    s1.info("**1. Answer**\nShort questions about your setup and online presence.")
-    s2.info("**2. See results**\nClear traffic-light summary with context.")
-    s3.info("**3. Act**\nTop-5 actions aligned to recognised control families.")
+    st.markdown('</div>', unsafe_allow_html=True)  # end hero
+
+    # HOW IT WORKS (3-step model)
+    st.markdown("<h4 style='margin:22px 0 10px;'>How it works</h4>", unsafe_allow_html=True)
+    st.markdown('<div class="how">', unsafe_allow_html=True)
+    st.markdown('<div class="step"><strong>1. Answer</strong><br/>Short questions about your setup and online presence.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="step"><strong>2. See results</strong><br/>Clear traffic-light summary with context.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="step"><strong>3. Act</strong><br/>Top-5 actions aligned to recognised control families.</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)  # end wrap
 
     st.markdown("---")
     if st.button("Start ➜", type="primary"):
