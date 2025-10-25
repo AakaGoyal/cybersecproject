@@ -334,56 +334,132 @@ elif st.session_state.page == "Initial 2":
         next_page("Summary")
 
 elif st.session_state.page == "Summary":
+    # ---------- helpers specific to the summary UI ----------
+    def area_systems_devices():
+        inv = (st.session_state.bp_inventory or "").lower()
+        if inv == "yes":
+            return "🟢 Good", "You keep a device list."
+        if inv == "partially":
+            return "🟡 Partial", "Some devices are tracked — finish your list."
+        if inv in {"no", "not sure"}:
+            return "🔴 At risk", "No device inventory → hard to secure what you can’t see."
+        return "⚪ Unknown", "Answer not provided."
+
+    def area_people_access():
+        byod = (st.session_state.bp_byod or "").lower()
+        email = (st.session_state.df_email or "").lower()
+        if byod == "no" and email == "yes":
+            return "🟢 Safe", "Managed devices & business email."
+        if (byod in {"yes", "sometimes"}) or (email in {"partially"}):
+            return "🟡 Mixed", "BYOD or partial business email — add MFA & clear rules."
+        if email == "no":
+            return "🔴 At risk", "Personal email in use — raises phishing risk."
+        return "⚪ Unknown", "Answer not provided."
+
+    def area_online_exposure():
+        web = (st.session_state.df_website or "").lower()
+        https = (st.session_state.df_https or "").lower()
+        if web == "yes" and https == "yes":
+            return "🟢 Protected", "Website uses HTTPS."
+        if web == "yes" and https in {"not sure"}:
+            return "🟡 Check", "Public site — confirm HTTPS (padlock)."
+        if web == "yes" and https == "no":
+            return "🔴 Exposed", "Add HTTPS to encrypt traffic and build trust."
+        if web == "no":
+            # No public site → typically lower exposure
+            return "🟢 Low", "No website — fewer internet entry points."
+        return "⚪ Unknown", "Answer not provided."
+
+    # ---------- header + traffic light ----------
     st.title("✅ Initial Assessment Summary")
+
+    # Overall level from your existing heuristic
+    level, emoji = digital_dependency_level()
+    st.markdown(f"#### {emoji} Overall digital dependency: **{level}**")
+    if level == "Low":
+        st.success("Great job — strong digital hygiene and low exposure.")
+    elif level == "Medium":
+        st.warning("Balanced setup with moderate digital reliance. A few improvements will reduce risk quickly.")
+    else:
+        st.error("Higher exposure — prioritise quick wins to lower risk.")
+
+    # ---------- snapshot ----------
     left, right = st.columns([1, 2], gap="large")
     with left:
-        snapshot()
+        st.subheader("Snapshot")
+        st.markdown(
+            f"**Business:** {st.session_state.company_name or '—'}  \n"
+            f"**Industry:** {resolved_industry()}  \n"
+            f"**People:** {st.session_state.employee_range or '—'}  •  "
+            f"**Years:** {st.session_state.years_in_business or '—'}  •  "
+            f"**Turnover:** {st.session_state.turnover_label or '—'}  \n"
+            f"**Work mode:** {st.session_state.work_mode or '—'}"
+        )
 
+    # ---------- mini-dashboard cards ----------
     with right:
-        level, emoji = digital_dependency_level()
-        st.markdown(f"**Overall digital dependency:** {emoji} **{level}**")
-        st.caption("Based on your answers about online exposure, data handling, and devices.")
-
-        st.markdown("---")
-        st.subheader("Business Profile")
-        st.markdown(
-            f"- **Assessed by:** {st.session_state.person_name}  \n"
-            f"- **Business:** {st.session_state.company_name}  \n"
-            f"- **Industry:** {resolved_industry()}  \n"
-            f"- **Years in business:** {st.session_state.years_in_business}  \n"
-            f"- **People:** {st.session_state.employee_range}  \n"
-            f"- **Turnover:** {st.session_state.turnover_label}  \n"
-            f"- **Work mode:** {st.session_state.work_mode}"
-        )
-
-        st.markdown("---")
-        st.subheader("Your Cyber Practices (Q1–Q9)")
-        st.markdown(
-            f"- **Q1 IT oversight:** {st.session_state.bp_it_manager or '—'}  \n"
-            f"- **Q2 Device inventory:** {st.session_state.bp_inventory or '—'}  \n"
-            f"- **Q3 BYOD:** {st.session_state.bp_byod or '—'}  \n"
-            f"- **Q4 Sensitive data:** {st.session_state.bp_sensitive or '—'}  \n"
-            f"- **Q5 Website:** {st.session_state.df_website or '—'}  \n"
-            f"- **Q6 HTTPS:** {st.session_state.df_https or '—'}  \n"
-            f"- **Q7 Business email:** {st.session_state.df_email or '—'}  \n"
-            f"- **Q8 Social presence:** {st.session_state.df_social or '—'}  \n"
-            f"- **Q9 Public info checks:** {st.session_state.df_review or '—'}"
-        )
-
-        st.markdown("---")
-        st.subheader("Highlights & Blind Spots")
-        hi, bs = summary_highlights_and_blindspots()
-        st.write("**Highlights**")
-        for item in hi: st.write(f"• {item}")
-        st.write("**Potential blind spots**")
-        for item in bs: st.write(f"• {item}")
+        st.subheader("At-a-glance")
+        c1, c2, c3 = st.columns(3)
+        s_txt, s_hint = area_systems_devices()
+        p_txt, p_hint = area_people_access()
+        o_txt, o_hint = area_online_exposure()
+        c1.metric("🖥️ Systems & devices", s_txt)
+        c2.metric("👥 People & access", p_txt)
+        c3.metric("🌐 Online exposure", o_txt)
+        st.caption(f"🖥️ {s_hint}")
+        st.caption(f"👥 {p_hint}")
+        st.caption(f"🌐 {o_hint}")
 
     st.markdown("---")
-    b1, b2, b3 = st.columns([1,1,2])
-    if b1.button("⬅ Back"):
+
+    # ---------- detailed recap ----------
+    st.subheader("Business profile")
+    st.markdown(
+        f"- **Assessed by:** {st.session_state.person_name or '—'}  \n"
+        f"- **Business:** {st.session_state.company_name or '—'}  \n"
+        f"- **Industry:** {resolved_industry()}  \n"
+        f"- **Years in business:** {st.session_state.years_in_business or '—'}  \n"
+        f"- **People:** {st.session_state.employee_range or '—'}  \n"
+        f"- **Turnover:** {st.session_state.turnover_label or '—'}  \n"
+        f"- **Work mode:** {st.session_state.work_mode or '—'}"
+    )
+
+    st.markdown("---")
+    st.subheader("Your answers (Q1–Q9)")
+    st.markdown(
+        f"- **Q1 IT oversight:** {st.session_state.bp_it_manager or '—'}  \n"
+        f"- **Q2 Device inventory:** {st.session_state.bp_inventory or '—'}  \n"
+        f"- **Q3 BYOD:** {st.session_state.bp_byod or '—'}  \n"
+        f"- **Q4 Sensitive data:** {st.session_state.bp_sensitive or '—'}  \n"
+        f"- **Q5 Website:** {st.session_state.df_website or '—'}  \n"
+        f"- **Q6 HTTPS:** {st.session_state.df_https or '—'}  \n"
+        f"- **Q7 Business email:** {st.session_state.df_email or '—'}  \n"
+        f"- **Q8 Social presence:** {st.session_state.df_social or '—'}  \n"
+        f"- **Q9 Public info checks:** {st.session_state.df_review or '—'}"
+    )
+
+    # ---------- highlights vs blind spots ----------
+    st.markdown("---")
+    st.subheader("Strengths & Risks")
+    hi, bs = summary_highlights_and_blindspots()
+    a, b = st.columns(2)
+    with a:
+        st.write("✅ **Strengths**")
+        for item in hi:
+            st.write(f"• {item}")
+    with b:
+        st.write("⚠️ **Areas to improve**")
+        for item in bs:
+            st.write(f"• {item}")
+
+    st.markdown("---")
+    st.info("You're nearly there. Simple actions can close most of these gaps quickly.")
+    d1, d2, d3 = st.columns([1,1,2])
+    if d1.button("⬅ Back"):
         next_page("Initial 2")
-    if b2.button("Start over"):
-        for k, v in defaults.items(): st.session_state[k] = v
+    if d2.button("Start over"):
+        for k, v in defaults.items():
+            st.session_state[k] = v
         next_page("Landing")
-    if b3.button("Continue to Detailed Questionnaire ➜", type="primary"):
-        st.info("Detailed questionnaire coming in the next phase.")
+    if d3.button("See my top 5 recommendations ➜", type="primary"):
+        st.info("Top-5 recommendations will be generated in the next phase of the build.")
