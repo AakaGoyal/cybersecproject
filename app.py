@@ -141,45 +141,94 @@ def validate_initial1():
 # -----------------------------
 # PAGES
 # -----------------------------
+# ===== Landing (professional hero with preview, trust cues, dual CTAs) =====
 if st.session_state.page == "Landing":
-    st.title("🛡️ SME Cybersecurity Self-Assessment")
-    st.subheader("Assess · Understand · Act — in under 15 minutes.")
-    st.write(
-        "Cyber threats powered by AI are getting more deceptive, "
-        "but most SMEs don’t have time for heavyweight frameworks. "
-        "This plain-language self-assessment helps you understand exposure and prioritise next steps, "
-        "mapped to recognised standards (NIST CSF 2.0 & ISO 27001:2022)."
-    )
-    st.markdown("### What to expect")
-    st.markdown(
-        "- 30 concise questions across key security areas  \n"
-        "- Traffic-light (RAG) results highlighting strengths and risks  \n"
-        "- Personalised top actions aligned to established standards  \n"
-        "- Runs locally — no data uploaded"
-    )
-    st.markdown("---")
-    cols = st.columns([1,1,6])
-    if cols[0].button("Start ➜", type="primary"):
-        next_page("Initial 1")
-    if cols[1].button("See sample results"):
-        # Seed demo data → Summary
-        st.session_state.person_name = "Demo User"
-        st.session_state.company_name = "Sample Co."
-        st.session_state.sector_label = "Retail & Hospitality"
-        st.session_state.years_in_business = "1–3 years"
-        st.session_state.employee_range = "10–25"
-        st.session_state.turnover_label = "€500k"
-        st.session_state.work_mode = "A mix of both"
-        st.session_state.bp_it_manager = "Shared responsibility"
-        st.session_state.bp_inventory = "Partially"
-        st.session_state.bp_byod = "Sometimes"
-        st.session_state.bp_sensitive = "Yes"
-        st.session_state.df_website = "Yes"
-        st.session_state.df_https = "No"
-        st.session_state.df_email = "Partially"
-        st.session_state.df_social = "Yes"
-        st.session_state.df_review = "Sometimes"
-        next_page("Summary")
+    # light CSS for spacing/typography without heavy theming
+    st.markdown("""
+    <style>
+      .container {max-width: 1100px; margin: 0 auto;}
+      .hero h1 {font-size: 2.2rem; line-height: 1.15; margin: 0 0 .5rem;}
+      .sub {font-size: 1.15rem; color: #444; margin-bottom: .75rem;}
+      .muted {color:#666;}
+      .lock {display:inline-flex; align-items:center; gap:.4rem; font-size:.95rem; color:#375; background:#EAF6EE; padding:.35rem .55rem; border-radius:8px;}
+      .grid {display:grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap:12px; margin-top:18px;}
+      .card {background: #fff; border:1px solid #eee; border-radius:14px; padding:12px 14px;}
+      .preview {background:#fff; border:1px solid #eee; border-radius:16px; padding:16px;}
+      .badge {display:inline-flex; align-items:center; gap:.4rem; padding:.2rem .5rem; border-radius:999px; font-size:.9rem;}
+      .badge.low{background:#E9F7EF} .badge.med{background:#FFF8E1} .badge.high{background:#FFEBEE}
+      .section-title {font-weight:700; font-size:1.25rem; margin:24px 0 8px;}
+      @media (max-width: 980px){
+        .grid {grid-template-columns: 1fr 1fr;}
+      }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # HERO
+    hero_left, hero_right = st.columns([7,5], gap="large")
+    with hero_left:
+        st.markdown('<div class="hero">', unsafe_allow_html=True)
+        st.markdown("### 🛡️ SME Cybersecurity Self-Assessment", unsafe_allow_html=True)
+        st.markdown('<h1 class="h1">Assess · Understand · Act — in under 15 minutes.</h1>', unsafe_allow_html=True)
+        st.markdown(
+            '<p class="sub">A plain-language self-assessment that shows your exposure and the <strong>top actions to take next</strong>. '
+            'Lightweight but <em>traceable</em> to recognised standards (NIST CSF 2.0, ISO 27001:2022).</p>',
+            unsafe_allow_html=True
+        )
+
+        cta1, cta2 = st.columns([1,1])
+        with cta1:
+            if st.button("Start self-assessment ➜", type="primary", use_container_width=True):
+                st.session_state.page = "Initial 1"; st.rerun()
+        with cta2:
+            if st.button("See sample results", use_container_width=True):
+                # seed demo data and jump to Summary
+                st.session_state.person_name = "Demo User"
+                st.session_state.company_name = "Sample Co."
+                st.session_state.sector_label = "Retail & Hospitality"
+                st.session_state.years_in_business = "1–3 years"
+                st.session_state.employee_range = "10–25"
+                st.session_state.turnover_label = "€500k"
+                st.session_state.work_mode = "A mix of both"
+                st.session_state.bp_it_manager = "Shared responsibility"
+                st.session_state.bp_inventory = "Partially"
+                st.session_state.bp_byod = "Sometimes"
+                st.session_state.bp_sensitive = "Yes"
+                st.session_state.df_website = "Yes"
+                st.session_state.df_https = "No"
+                st.session_state.df_email = "Partially"
+                st.session_state.df_social = "Yes"
+                st.session_state.df_review = "Sometimes"
+                st.session_state.page = "Summary"; st.rerun()
+
+        st.markdown('<div class="lock">🔒 No sign-up. Answers stay on this device.</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        st.markdown('<div class="section-title">Why this works</div>', unsafe_allow_html=True)
+        st.markdown('<div class="grid">', unsafe_allow_html=True)
+        st.markdown('<div class="card">✅ Plain-language questions</div>', unsafe_allow_html=True)
+        st.markdown('<div class="card">📎 Traceable to NIST/ISO</div>', unsafe_allow_html=True)
+        st.markdown('<div class="card">⚡ Lightweight, 10–15 minutes</div>', unsafe_allow_html=True)
+        st.markdown('<div class="card">🧪 Safe demos of common scams</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with hero_right:
+        st.markdown('<div class="preview">', unsafe_allow_html=True)
+        st.caption("Preview of your summary")
+        st.markdown('<span class="badge med">🟡 Overall: Medium dependency</span>', unsafe_allow_html=True)
+        st.write("**Highlights**")
+        st.write("• Website uses HTTPS\n\n• Device list exists (partial)")
+        st.write("**Potential blind spots**")
+        st.write("• Personal email in use → move to business email\n• BYOD needs MFA + clear rules")
+        st.markdown('<div class="muted">Mapped to: NIST CSF PR.AC, PR.DS · ISO 27001 A.5, A.8</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # HOW IT WORKS
+    st.markdown('<div class="section-title">How it works</div>', unsafe_allow_html=True)
+    s1, s2, s3 = st.columns(3)
+    s1.info("**1. Answer**\nShort questions about your setup and online presence.")
+    s2.info("**2. See results**\nClear traffic-light summary with context.")
+    s3.info("**3. Act**\nTop-5 actions aligned to recognised control families.")
+
 
 elif st.session_state.page == "Initial 1":
     st.title("Step 1 of 3 – Business Profile")
