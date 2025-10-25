@@ -334,132 +334,132 @@ elif st.session_state.page == "Initial 2":
         next_page("Summary")
 
 elif st.session_state.page == "Summary":
-    # ---------- helpers specific to the summary UI ----------
-    def area_systems_devices():
-        inv = (st.session_state.bp_inventory or "").lower()
-        if inv == "yes":
-            return "🟢 Good", "You keep a device list."
-        if inv == "partially":
-            return "🟡 Partial", "Some devices are tracked — finish your list."
-        if inv in {"no", "not sure"}:
-            return "🔴 At risk", "No device inventory → hard to secure what you can’t see."
-        return "⚪ Unknown", "Answer not provided."
+    # ---- compact CSS so everything fits above the fold ----
+    st.markdown("""
+    <style>
+      .block-container {padding-top: 1.2rem; padding-bottom: 0.6rem; max-width: 1150px;}
+      h1, h2, h3, h4 {margin: .2rem 0 .6rem;}
+      .card {border:1px solid #e6e8ec; border-radius:12px; padding:10px 12px; background:#fff;}
+      .badge {display:inline-flex; align-items:center; gap:.45rem; padding:.25rem .6rem;
+              border-radius:999px; font-weight:600; background:#e3f7e8; color:#0f5132; border:1px solid #c8eed1;}
+      .warn {background:#fff6db; color:#8a6d00; border-color:#fde9a9;}
+      .danger {background:#ffe6e6; color:#842029; border-color:#ffcdcd;}
+      .muted {color:#6b7280; font-size:.92rem;}
+      ul {margin:.25rem 0 .25rem 1.1rem;} ul li{margin:.15rem 0;}
+      .metric {border:1px solid #eceff3; border-radius:12px; padding:10px; text-align:center;}
+      .metric h4{margin:.1rem 0 .25rem; font-size:1rem;}
+      .metric .v{font-size:1.05rem; font-weight:700;}
+      .cta-row {margin-top:.5rem;}
+    </style>
+    """, unsafe_allow_html=True)
 
-    def area_people_access():
-        byod = (st.session_state.bp_byod or "").lower()
-        email = (st.session_state.df_email or "").lower()
-        if byod == "no" and email == "yes":
-            return "🟢 Safe", "Managed devices & business email."
-        if (byod in {"yes", "sometimes"}) or (email in {"partially"}):
-            return "🟡 Mixed", "BYOD or partial business email — add MFA & clear rules."
-        if email == "no":
-            return "🔴 At risk", "Personal email in use — raises phishing risk."
-        return "⚪ Unknown", "Answer not provided."
-
-    def area_online_exposure():
-        web = (st.session_state.df_website or "").lower()
-        https = (st.session_state.df_https or "").lower()
-        if web == "yes" and https == "yes":
-            return "🟢 Protected", "Website uses HTTPS."
-        if web == "yes" and https in {"not sure"}:
-            return "🟡 Check", "Public site — confirm HTTPS (padlock)."
-        if web == "yes" and https == "no":
-            return "🔴 Exposed", "Add HTTPS to encrypt traffic and build trust."
-        if web == "no":
-            # No public site → typically lower exposure
-            return "🟢 Low", "No website — fewer internet entry points."
-        return "⚪ Unknown", "Answer not provided."
-
-    # ---------- header + traffic light ----------
-    st.title("✅ Initial Assessment Summary")
-
-    # Overall level from your existing heuristic
-    level, emoji = digital_dependency_level()
-    st.markdown(f"#### {emoji} Overall digital dependency: **{level}**")
-    if level == "Low":
-        st.success("Great job — strong digital hygiene and low exposure.")
-    elif level == "Medium":
-        st.warning("Balanced setup with moderate digital reliance. A few improvements will reduce risk quickly.")
-    else:
-        st.error("Higher exposure — prioritise quick wins to lower risk.")
-
-    # ---------- snapshot ----------
-    left, right = st.columns([1, 2], gap="large")
-    with left:
-        st.subheader("Snapshot")
+    # ---- single source of truth for the profile block (avoids duplication) ----
+    def render_snapshot_card():
         st.markdown(
-            f"**Business:** {st.session_state.company_name or '—'}  \n"
-            f"**Industry:** {resolved_industry()}  \n"
-            f"**People:** {st.session_state.employee_range or '—'}  •  "
-            f"**Years:** {st.session_state.years_in_business or '—'}  •  "
-            f"**Turnover:** {st.session_state.turnover_label or '—'}  \n"
-            f"**Work mode:** {st.session_state.work_mode or '—'}"
+            f'<div class="card">'
+            f'<div><b>Business:</b> {st.session_state.company_name or "—"}</div>'
+            f'<div><b>Industry:</b> {resolved_industry()}</div>'
+            f'<div><b>People:</b> {st.session_state.employee_range or "—"} · '
+            f'<b>Years:</b> {st.session_state.years_in_business or "—"} · '
+            f'<b>Turnover:</b> {st.session_state.turnover_label or "—"}</div>'
+            f'<div><b>Work mode:</b> {st.session_state.work_mode or "—"}</div>'
+            f'</div>',
+            unsafe_allow_html=True
         )
 
-    # ---------- mini-dashboard cards ----------
-    with right:
-        st.subheader("At-a-glance")
-        c1, c2, c3 = st.columns(3)
+    def area_systems_devices():
+        inv = (st.session_state.bp_inventory or "").lower()
+        if inv == "yes":           return "🟢 Good", "Device list maintained."
+        if inv == "partially":     return "🟡 Partial", "Finish your device list."
+        if inv in {"no","not sure"}: return "🔴 At risk", "No inventory → hard to secure."
+        return "⚪ Unknown", "—"
+
+    def area_people_access():
+        byod  = (st.session_state.bp_byod or "").lower()
+        email = (st.session_state.df_email or "").lower()
+        if byod == "no" and email == "yes":                 return "🟢 Safe", "Managed devices & business email."
+        if email == "no":                                    return "🔴 At risk", "Personal email in use."
+        if byod in {"yes","sometimes"} or email=="partially": return "🟡 Mixed", "Add MFA & BYOD rules."
+        return "⚪ Unknown", "—"
+
+    def area_online_exposure():
+        web   = (st.session_state.df_website or "").lower()
+        https = (st.session_state.df_https or "").lower()
+        if web == "yes" and https == "yes":  return "🟢 Protected", "Site uses HTTPS."
+        if web == "yes" and https == "no":   return "🔴 Exposed", "Add HTTPS (encrypt traffic)."
+        if web == "yes" and https == "not sure": return "🟡 Check", "Verify HTTPS (padlock)."
+        if web == "no":                      return "🟢 Low", "No public site."
+        return "⚪ Unknown", "—"
+
+    # ---------- header + traffic light ----------
+    level, emoji = digital_dependency_level()
+    st.markdown("## ✅ Initial Assessment Summary")
+    if level == "Low":
+        st.markdown(f'<span class="badge">🟢 Overall digital dependency: <b>Low</b></span>', unsafe_allow_html=True)
+        st.caption("Great job — strong digital hygiene and low exposure.")
+    elif level == "Medium":
+        st.markdown(f'<span class="badge warn">🟡 Overall digital dependency: <b>Medium</b></span>', unsafe_allow_html=True)
+        st.caption("Balanced setup. A few quick wins will reduce risk fast.")
+    else:
+        st.markdown(f'<span class="badge danger">🔴 Overall digital dependency: <b>High</b></span>', unsafe_allow_html=True)
+        st.caption("Higher exposure — prioritise quick actions to lower risk.")
+
+    st.markdown("")
+
+    # ---------- TOP ROW: Snapshot (left) · At-a-glance tiles (right) ----------
+    c_left, c_right = st.columns([1.15, 1.85], gap="large")
+    with c_left:
+        st.markdown("#### Snapshot")
+        render_snapshot_card()
+
+    with c_right:
+        st.markdown("#### At-a-glance")
+        a1, a2, a3 = st.columns(3)
         s_txt, s_hint = area_systems_devices()
         p_txt, p_hint = area_people_access()
         o_txt, o_hint = area_online_exposure()
-        c1.metric("🖥️ Systems & devices", s_txt)
-        c2.metric("👥 People & access", p_txt)
-        c3.metric("🌐 Online exposure", o_txt)
-        st.caption(f"🖥️ {s_hint}")
-        st.caption(f"👥 {p_hint}")
-        st.caption(f"🌐 {o_hint}")
+        a1.markdown(f'<div class="metric"><h4>🖥️ Systems & devices</h4><div class="v">{s_txt}</div></div>', unsafe_allow_html=True)
+        a2.markdown(f'<div class="metric"><h4>👥 People & access</h4><div class="v">{p_txt}</div></div>', unsafe_allow_html=True)
+        a3.markdown(f'<div class="metric"><h4>🌐 Online exposure</h4><div class="v">{o_txt}</div></div>', unsafe_allow_html=True)
+        st.caption(f"🖥️ {s_hint} · 👥 {p_hint} · 🌐 {o_hint}")
 
     st.markdown("---")
 
-    # ---------- detailed recap ----------
-    st.subheader("Business profile")
-    st.markdown(
-        f"- **Assessed by:** {st.session_state.person_name or '—'}  \n"
-        f"- **Business:** {st.session_state.company_name or '—'}  \n"
-        f"- **Industry:** {resolved_industry()}  \n"
-        f"- **Years in business:** {st.session_state.years_in_business or '—'}  \n"
-        f"- **People:** {st.session_state.employee_range or '—'}  \n"
-        f"- **Turnover:** {st.session_state.turnover_label or '—'}  \n"
-        f"- **Work mode:** {st.session_state.work_mode or '—'}"
-    )
-
-    st.markdown("---")
-    st.subheader("Your answers (Q1–Q9)")
-    st.markdown(
-        f"- **Q1 IT oversight:** {st.session_state.bp_it_manager or '—'}  \n"
-        f"- **Q2 Device inventory:** {st.session_state.bp_inventory or '—'}  \n"
-        f"- **Q3 BYOD:** {st.session_state.bp_byod or '—'}  \n"
-        f"- **Q4 Sensitive data:** {st.session_state.bp_sensitive or '—'}  \n"
-        f"- **Q5 Website:** {st.session_state.df_website or '—'}  \n"
-        f"- **Q6 HTTPS:** {st.session_state.df_https or '—'}  \n"
-        f"- **Q7 Business email:** {st.session_state.df_email or '—'}  \n"
-        f"- **Q8 Social presence:** {st.session_state.df_social or '—'}  \n"
-        f"- **Q9 Public info checks:** {st.session_state.df_review or '—'}"
-    )
-
-    # ---------- highlights vs blind spots ----------
-    st.markdown("---")
-    st.subheader("Strengths & Risks")
+    # ---------- MIDDLE ROW: Strengths vs Risks side-by-side ----------
     hi, bs = summary_highlights_and_blindspots()
-    a, b = st.columns(2)
-    with a:
-        st.write("✅ **Strengths**")
-        for item in hi:
-            st.write(f"• {item}")
-    with b:
-        st.write("⚠️ **Areas to improve**")
-        for item in bs:
-            st.write(f"• {item}")
+    s_col, r_col = st.columns(2, gap="large")
+    with s_col:
+        st.markdown("#### ✅ Strengths")
+        st.markdown('<div class="card"><ul>'+ "".join([f"<li>{x}</li>" for x in hi]) +'</ul></div>', unsafe_allow_html=True)
+    with r_col:
+        st.markdown("#### ⚠️ Areas to improve")
+        st.markdown('<div class="card"><ul>'+ "".join([f"<li>{x}</li>" for x in bs]) +'</ul></div>', unsafe_allow_html=True)
 
-    st.markdown("---")
-    st.info("You're nearly there. Simple actions can close most of these gaps quickly.")
-    d1, d2, d3 = st.columns([1,1,2])
-    if d1.button("⬅ Back"):
+    # ---------- Save space: put long details behind expanders ----------
+    with st.expander("Business details"):
+        # reuse the same renderer to avoid drift
+        render_snapshot_card()
+        st.caption("This is the same information as the snapshot above (no duplication).")
+
+    with st.expander("See all answers (Q1–Q9)"):
+        st.markdown(
+            f"- **Q1 IT oversight:** {st.session_state.bp_it_manager or '—'}  \n"
+            f"- **Q2 Device inventory:** {st.session_state.bp_inventory or '—'}  \n"
+            f"- **Q3 BYOD:** {st.session_state.bp_byod or '—'}  \n"
+            f"- **Q4 Sensitive data:** {st.session_state.bp_sensitive or '—'}  \n"
+            f"- **Q5 Website:** {st.session_state.df_website or '—'}  \n"
+            f"- **Q6 HTTPS:** {st.session_state.df_https or '—'}  \n"
+            f"- **Q7 Business email:** {st.session_state.df_email or '—'}  \n"
+            f"- **Q8 Social presence:** {st.session_state.df_social or '—'}  \n"
+            f"- **Q9 Public info checks:** {st.session_state.df_review or '—'}"
+        )
+
+    st.markdown('<div class="cta-row"></div>', unsafe_allow_html=True)
+    b1, b2, b3 = st.columns([1,1,2])
+    if b1.button("⬅ Back"):
         next_page("Initial 2")
-    if d2.button("Start over"):
-        for k, v in defaults.items():
-            st.session_state[k] = v
+    if b2.button("Start over"):
+        for k, v in defaults.items(): st.session_state[k] = v
         next_page("Landing")
-    if d3.button("See my top 5 recommendations ➜", type="primary"):
-        st.info("Top-5 recommendations will be generated in the next phase of the build.")
+    if b3.button("See my top 5 recommendations ➜", type="primary"):
+        st.info("Top-5 recommendations view coming next.")
