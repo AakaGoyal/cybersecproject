@@ -290,19 +290,22 @@ if st.session_state.page == "Step 2":
             go("Step 3")
 
 # ─────────────────────────────────────────────────────────────
-# STEP 3 — Summary (one screen)
+# STEP 3 — Summary (full “cards + traffic lights” layout)
 # ─────────────────────────────────────────────────────────────
 if st.session_state.page == "Step 3":
-    st.markdown("##### Step 3 of 3")
     st.markdown("## Initial Assessment Summary")
 
     over_txt, over_class, over_msg = overall_badge()
-    st.markdown(f'<span class="chip {over_class}">Overall digital dependency: <b>{over_txt}</b></span>', unsafe_allow_html=True)
+    st.markdown(
+        f'<span class="pill {over_class}">Overall digital dependency: <b>{over_txt}</b></span>',
+        unsafe_allow_html=True,
+    )
     st.caption(over_msg)
 
-    a, b = st.columns([1.1, 2])
-    with a:
-        st.markdown("#### Snapshot")
+    # Row 1: Snapshot (left) + At-a-glance (right)
+    snap, glance = st.columns([1.1, 1.9], gap="large")
+    with snap:
+        st.markdown("### Snapshot")
         st.markdown(
             f'<div class="card">'
             f'<div><b>Business:</b> {st.session_state.company_name}</div>'
@@ -311,50 +314,137 @@ if st.session_state.page == "Step 3":
             f'<b>Years:</b> {st.session_state.years_in_business} · '
             f'<b>Turnover:</b> {st.session_state.turnover_label}</div>'
             f'<div><b>Work mode:</b> {st.session_state.work_mode}</div>'
-            f'</div>', unsafe_allow_html=True
+            f'</div>',
+            unsafe_allow_html=True,
         )
-    with b:
-        st.markdown("#### At-a-glance")
-        sys,ppl,net = area_rag()
-        st.markdown(f'<span class="chip {sys[1]}">🖥️ Systems & devices · {sys[0]}</span>', unsafe_allow_html=True)
-        st.markdown(f'<span class="chip {ppl[1]}">👥 People & access · {ppl[0]}</span>', unsafe_allow_html=True)
-        st.markdown(f'<span class="chip {net[1]}">🌐 Online exposure · {net[0]}</span>', unsafe_allow_html=True)
 
-    # Keep on one screen: details behind two small expanders
-    st.markdown("---")
-    colS, colR = st.columns(2)
-    with colS:
-        with st.expander("✅ Strengths"):
-            strengths = []
+    with glance:
+        st.markdown("### At-a-glance")
+        sys, ppl, net = area_rag()
+
+        g1, g2, g3 = st.columns(3)
+        with g1:
+            st.markdown(
+                '<div class="card">'
+                '<div style="font-weight:600;display:flex;gap:.4rem;align-items:center">'
+                '🖥️ Systems & devices</div>'
+                f'<div style="margin-top:.35rem">{sys[0]}</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+        with g2:
+            st.markdown(
+                '<div class="card">'
+                '<div style="font-weight:600;display:flex;gap:.4rem;align-items:center">'
+                '👥 People & access</div>'
+                f'<div style="margin-top:.35rem">{ppl[0]}</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+        with g3:
+            st.markdown(
+                '<div class="card">'
+                '<div style="font-weight:600;display:flex;gap:.4rem;align-items:center">'
+                '🌐 Online exposure</div>'
+                f'<div style="margin-top:.35rem">{net[0]}</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+
+        # Small inline “hints” row like the screenshot
+        hints = []
+        if st.session_state.bp_inventory in ("Yes", "Partially"):
+            pass
+        else:
+            hints.append("📝 Finish your device list.")
+        hints.append("👥 Add MFA & BYOD rules.")
+        if st.session_state.df_website == "Yes":
             if st.session_state.df_https == "Yes":
-                strengths.append("Website uses HTTPS (encrypted traffic).")
-            if st.session_state.bp_inventory in ("Yes","Partially"):
-                strengths.append("You keep a device list (even partial helps).")
-            if not strengths:
-                strengths.append("Solid starting point across core practices.")
-            st.markdown("<ul>"+ "".join([f"<li>{x}</li>" for x in strengths]) +"</ul>", unsafe_allow_html=True)
-    with colR:
-        with st.expander("⚠️ Areas to improve", expanded=True):
-            risks = []
-            if st.session_state.df_email == "No":
-                risks.append("Personal email in use — move to business email to cut phishing risk.")
-            if st.session_state.bp_byod in ("Yes","Sometimes"):
-                risks.append("BYOD needs clear rules, MFA and basic hardening.")
-            if st.session_state.bp_sensitive == "Yes":
-                risks.append("Sensitive data calls for regular backups and strong access control (MFA).")
-            if st.session_state.df_website == "Yes" and st.session_state.df_https != "Yes":
-                risks.append("Add HTTPS to your website (padlock) to encrypt traffic and build trust.")
-            if not risks:
-                risks.append("Keep improving: test incident response and tighten MFA hygiene.")
-            st.markdown("<ul>"+ "".join([f"<li>{x}</li>" for x in risks]) +"</ul>", unsafe_allow_html=True)
+                hints.append("🔒 Site uses HTTPS.")
+            else:
+                hints.append("🔒 Add HTTPS to your website.")
+        st.caption(" · ".join(hints))
 
-    c1,c2,c3 = st.columns([1,1,2])
+    st.markdown("---")
+
+    # Row 2: Strengths & Risks
+    colS, colR = st.columns(2, gap="large")
+    with colS:
+        st.markdown("### Strengths")
+        strengths = []
+        if st.session_state.df_https == "Yes":
+            strengths.append("Website uses HTTPS (encrypted traffic).")
+        if st.session_state.bp_inventory in ("Yes", "Partially"):
+            strengths.append("You keep a device list (even partial helps).")
+        if not strengths:
+            strengths.append("Solid starting point across core practices.")
+        st.markdown(
+            '<div class="card"><ul style="margin:.25rem 1rem">'
+            + "".join([f"<li>{x}</li>" for x in strengths])
+            + "</ul></div>",
+            unsafe_allow_html=True,
+        )
+
+    with colR:
+        st.markdown("### Areas to improve")
+        risks = []
+        if st.session_state.df_email == "No":
+            risks.append("Personal email in use — move to business email to cut phishing risk.")
+        if st.session_state.bp_byod in ("Yes", "Sometimes"):
+            risks.append("BYOD needs clear rules, MFA and basic hardening.")
+        if st.session_state.bp_sensitive == "Yes":
+            risks.append("Sensitive data calls for regular backups and strong access control (MFA).")
+        if st.session_state.df_website == "Yes" and st.session_state.df_https != "Yes":
+            risks.append("Add HTTPS to your website (padlock) to encrypt traffic and build trust.")
+        if not risks:
+            risks.append("Keep improving: test incident response and tighten MFA hygiene.")
+        st.markdown(
+            '<div class="card"><ul style="margin:.25rem 1rem">'
+            + "".join([f"<li>{x}</li>" for x in risks])
+            + "</ul></div>",
+            unsafe_allow_html=True,
+        )
+
+    # Row 3: compact expanders
+    st.markdown("")
+    with st.expander("Business details"):
+        st.write(
+            {
+                "Business": st.session_state.company_name,
+                "Industry": resolved_industry(),
+                "People (incl. contractors)": st.session_state.employee_range,
+                "Years in business": st.session_state.years_in_business,
+                "Turnover": st.session_state.turnover_label,
+                "Work mode": st.session_state.work_mode,
+            }
+        )
+
+    with st.expander("See all answers (Q1–Q9)"):
+        st.write(
+            {
+                "Q1 IT oversight": st.session_state.bp_it_manager or "—",
+                "Q2 Device inventory": st.session_state.bp_inventory or "—",
+                "Q3 BYOD": st.session_state.bp_byod or "—",
+                "Q4 Sensitive data": st.session_state.bp_sensitive or "—",
+                "Q5 Website": st.session_state.df_website or "—",
+                "Q6 HTTPS": st.session_state.df_https or "—",
+                "Q7 Business email": st.session_state.df_email or "—",
+                "Q8 Social presence": st.session_state.df_social or "—",
+                "Q9 Public info checks": st.session_state.df_review or "—",
+            }
+        )
+
+    st.markdown("")
+    c1, c2, c3 = st.columns([1, 1, 2])
     with c1:
-        if st.button("⬅ Back to Step 2"):
-            go("Step 2")
+        if st.button("⬅ Back"):
+            st.session_state.page = "Step 2"
+            st.rerun()
     with c2:
         if st.button("Start over"):
-            for k,v in defaults.items(): st.session_state[k]=v
-            go("Landing")
+            for k, v in defaults.items():
+                st.session_state[k] = v
+            st.session_state.page = "Landing"
+            st.rerun()
     with c3:
-        st.write("")  # placeholder for future actions
+        st.button("See my top 5 recommendations ➜", type="primary")
