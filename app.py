@@ -132,8 +132,7 @@ def org_size():
 
 def industry_tag():
     label = resolved_industry()
-    return INDU
-STRY_TAGS.get(label, "other")
+    return INDUSTRY_TAGS.get(label, "other")
 
 def region_tag():
     r = (st.session_state.get("business_region") or "").lower()
@@ -161,7 +160,7 @@ def certification_tags():
 
 def compute_tags():
     tags = set()
-    # size & industry & region
+    # size, industry, region
     tags.add(f"size:{org_size()}")
     tags.add(f"industry:{industry_tag()}")
     tags.add(f"geo:{region_tag()}")
@@ -202,7 +201,7 @@ def compute_tags():
     tags |= certification_tags()
     return tags
 
-# At-a-glance (RAG) from baseline Q1–Q9
+# Baseline RAG from Q1–Q9
 def area_rag():
     inv = (st.session_state.bp_inventory or "").lower()
     if inv == "yes":    sys = ("🟢 Good","green")
@@ -347,22 +346,16 @@ def pick_active_sections(tags:set):
     order = [s["id"] for s in ALL_SECTIONS]
     return [sid for sid in order if sid in active]
 
-# Minimal compliance hinting (soft guidance)
 def applicable_compliance(tags:set):
     hints = []
-    # GDPR (EU/UK generally)
     if any(t in tags for t in ["geo:eu","geo:uk"]) or "data:pii" in tags or "data:employee" in tags:
         hints.append(("GDPR","Regulation (EU/UK)","Likely applicable if you process EU/UK personal data. Review DPAs and cross-border transfers."))
-    # PCI DSS
     if "payments:card" in tags or "system:pos" in tags or "data:financial" in tags:
         hints.append(("PCI DSS","Industry Standard","If you store/process/transmit card data. PSP-managed PoS may reduce scope."))
-    # HIPAA (conditional)
     if "data:health" in tags:
         hints.append(("HIPAA","US Regulation","Applies to US covered entities/business associates. Treat as conditional if outside US."))
-    # ISO 27001
     if "cert:iso27001" in tags or org_size() in {"Small","Medium"}:
         hints.append(("ISO/IEC 27001","Standard","Useful maturity target and customer trust signal."))
-    # NIS2 (soft note)
     if "cert:nis2" in tags or industry_tag() in {"manufacturing","it_services","public_nonprofit"}:
         hints.append(("NIS2","EU Directive","Sector & size dependent; check local transposition and scoping."))
     return hints
@@ -693,7 +686,6 @@ if st.session_state.page == "Step 3":
             risks.append("Keep improving: test incident response and tighten MFA hygiene.")
         st.markdown('<div class="card"><ul style="margin:.25rem 1rem">'+ "".join([f"<li>{x}</li>" for x in risks]) + "</ul></div>", unsafe_allow_html=True)
 
-    # Compact expanders
     st.markdown("")
     with st.expander("Business details"):
         st.write({
@@ -729,7 +721,6 @@ if st.session_state.page == "Step 3":
             "Q9 Public info checks": st.session_state.df_review or "—",
         })
 
-    # Compliance hints (soft)
     st.markdown("---")
     st.markdown("### Likely compliance & standards to consider")
     tags = compute_tags()
@@ -741,7 +732,6 @@ if st.session_state.page == "Step 3":
             f'</div>', unsafe_allow_html=True
         )
 
-    # Navigation
     st.markdown("")
     c1, c2, c3 = st.columns([1, 1, 2])
     with c1:
@@ -758,7 +748,7 @@ if st.session_state.page == "Step 3":
             st.session_state.page = "Detailed"; st.rerun()
 
 # ─────────────────────────────────────────────────────────────
-# TIER-2 — Detailed Assessment (Sections 3–8, adaptive)
+# TIER-2 — Detailed Assessment (adaptive)
 # ─────────────────────────────────────────────────────────────
 if st.session_state.page == "Detailed":
     st.markdown("##### Step 3 of 3")
@@ -787,7 +777,7 @@ if st.session_state.page == "Detailed":
             st.session_state.page = "Report"; st.rerun()
 
 # ─────────────────────────────────────────────────────────────
-# Final Report (optional lightweight page)
+# Final Report
 # ─────────────────────────────────────────────────────────────
 if st.session_state.page == "Report":
     st.markdown("## Recommendations & Section Scores")
@@ -798,16 +788,17 @@ if st.session_state.page == "Report":
             level = "green" if sc < 0.5 else "amber" if sc < 1.2 else "red"
             label = "Low" if level=="green" else "Medium" if level=="amber" else "High"
             with col:
-                st.markdown(f'<div class="card"><div style="font-weight:600">{sid}</div>'
-                            f'<div style="margin-top:.25rem"><span class="pill {level}">Risk: <b>{label}</b> (score {sc})</span></div></div>',
-                            unsafe_allow_html=True)
+                st.markdown(
+                    f'<div class="card"><div style="font-weight:600">{sid}</div>'
+                    f'<div style="margin-top:.25rem"><span class="pill {level}">Risk: <b>{label}</b> (score {sc})</span></div></div>',
+                    unsafe_allow_html=True
+                )
     else:
         st.caption("No detailed scores yet. Complete the detailed assessment to see section scores.")
 
     st.markdown("---")
     st.markdown("### Top actions to consider")
     actions = []
-    # Simple heuristics from baseline + tags
     if (st.session_state.df_website == "Yes") and (st.session_state.df_https != "Yes"):
         actions.append("Enable HTTPS and force redirect from HTTP to HTTPS.")
     if st.session_state.df_email in ("No","Partially"):
