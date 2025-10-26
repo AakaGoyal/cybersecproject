@@ -17,8 +17,24 @@ st.markdown("""
   .red{background:#ffe5e5;color:#842029;border-color:#ffcccc}
   .card {border:1px solid #e6e8ec;border-radius:12px;padding:10px 12px;background:#fff}
   .sticky {position: sticky; top: 10px;}
-  div[data-baseweb="radio"] > div {gap:.5rem;}
   .btnrow {margin-top:.4rem}
+
+  /* Make radios look like traffic-light pills (order-specific coloring) */
+  div[data-baseweb="radio"] > div { display:flex; gap:.5rem; flex-wrap:wrap; }
+  div[data-baseweb="radio"] input { display:none !important; } /* hide default dots */
+  div[data-baseweb="radio"] label {
+    border:1px solid #e5e7eb; border-radius:999px; padding:.28rem .70rem;
+    background:#f9fafb; font-weight:600; color:#374151; cursor:pointer;
+  }
+  /* 1st = Yes, 2nd = Partially, 3rd = No, 4th = Not sure */
+  div[data-baseweb="radio"] label:nth-child(1) { background:#e8f7ee; border-color:#cceedd; color:#0f5132; }   /* Yes = green */
+  div[data-baseweb="radio"] label:nth-child(2) { background:#fff5d6; border-color:#ffe7ad; color:#8a6d00; }   /* Partially = amber */
+  div[data-baseweb="radio"] label:nth-child(3) { background:#ffe5e5; border-color:#ffcccc; color:#842029; }   /* No = red */
+  div[data-baseweb="radio"] label:nth-child(4) { background:#f3f4f6; border-color:#e5e7eb; color:#374151; }    /* Not sure = gray */
+  /* give a subtle “selected” look */
+  div[data-baseweb="radio"] label:has(input:checked) {
+    box-shadow: inset 0 0 0 2px rgba(0,0,0,.06);
+  }
 </style>
 """, unsafe_allow_html=True)
 
@@ -44,7 +60,6 @@ TURNOVER_OPTIONS = [
     "€1M–€2M","€2M–€5M","€5M–€10M",">€10M"
 ]
 
-# New options for routing/context
 REGION_OPTIONS = ["EU / EEA", "UK", "United States", "Other / Multi-region"]
 CRITICAL_SYSTEMS = ["ERP", "PoS", "CRM", "EHR", "CMS", "Other (type below)"]
 WORK_ENVIRONMENTS = ["Local servers", "Cloud apps", "Hybrid"]
@@ -75,7 +90,7 @@ defaults = dict(
     employee_range=EMPLOYEE_RANGES[0],
     turnover_label=TURNOVER_OPTIONS[0],
     work_mode=WORK_MODE[0],
-    # Step 1 — new context
+    # Step 1 — context
     business_region=REGION_OPTIONS[0],
     critical_systems=[],
     critical_systems_other="",
@@ -160,11 +175,9 @@ def certification_tags():
 
 def compute_tags():
     tags = set()
-    # size, industry, region
     tags.add(f"size:{org_size()}")
     tags.add(f"industry:{industry_tag()}")
     tags.add(f"geo:{region_tag()}")
-    # infra / work
     env = (st.session_state.get("primary_work_env") or "")
     if env == "Cloud apps": tags.add("infra:cloud")
     elif env == "Local servers": tags.add("infra:onprem")
@@ -173,31 +186,26 @@ def compute_tags():
     if rr == "Fully remote": tags.add("work:remote")
     elif rr == "Hybrid": tags.add("work:hybrid")
     else: tags.add("work:onsite")
-    # systems
     for s in st.session_state.get("critical_systems", []) or []:
         key = s.split()[0].lower()
         if key in {"erp","pos","crm","ehr","cms"}:
             tags.add(f"system:{key}")
         elif "other" in key:
             tags.add("system:other")
-    # data types
     for d in st.session_state.get("data_types", []) or []:
         dl = d.lower()
         if "customer" in dl: tags.add("data:pii")
         if "employee" in dl: tags.add("data:employee")
         if "health" in dl: tags.add("data:health")
         if "financial" in dl: tags.add("data:financial")
-    # cross-border
     cb = st.session_state.get("cross_border") or ""
     if cb == "EU-only": tags.add("geo:eu_only")
     elif cb == "Unsure": tags.add("geo:unsure")
     else: tags.add("geo:crossborder")
-    # sensitivity & cards
     if (st.session_state.get("bp_sensitive") or "").lower() == "yes":
         tags.add("data:sensitive")
     if (st.session_state.get("bp_card_payments") or "").lower() == "yes":
         tags.add("payments:card")
-    # certifications
     tags |= certification_tags()
     return tags
 
@@ -245,11 +253,11 @@ SECTION_3 = {
     "title":"🔐 Access & Identity Management",
     "purpose":"Control of user access and authentication.",
     "questions":[
-        {"id":"ai_pw","text":"Are strong passwords required for all accounts?","hint":"≥10–12 chars; mix letters/numbers/symbols."},
-        {"id":"ai_mfa","text":"Is Multi-Factor Authentication (MFA) enabled for key accounts?","hint":"Password + extra step (app/token)."},
-        {"id":"ai_admin","text":"Are admin rights limited to only those who need them?","hint":"Restrict & monitor privileged roles."},
-        {"id":"ai_shared","text":"Are shared accounts avoided or controlled?","hint":"Avoid everyone using 'admin@'."},
-        {"id":"ai_leavers","text":"Are old or unused accounts removed promptly?","hint":"Employees leaving; contractors end."},
+        {"id":"ai_pw","text":"Are strong passwords required for all accounts?","hint":"≥10–12 chars; avoid reuse; use a password manager."},
+        {"id":"ai_mfa","text":"Is Multi-Factor Authentication (MFA) enabled for key accounts?","hint":"Start with email, admin and finance; app or security key."},
+        {"id":"ai_admin","text":"Are admin rights limited to only those who need them?","hint":"Grant temporarily; review quarterly; monitor admin sign-ins."},
+        {"id":"ai_shared","text":"Are shared accounts avoided or controlled?","hint":"Prefer named accounts; rotate passwords and log usage."},
+        {"id":"ai_leavers","text":"Are old or unused accounts removed promptly?","hint":"Disable the same day a person leaves; reclaim devices and keys."},
     ]
 }
 SECTION_4 = {
@@ -257,13 +265,13 @@ SECTION_4 = {
     "title":"💻 Device & Data Protection",
     "purpose":"How well devices and company data are secured.",
     "questions":[
-        {"id":"dd_lock","text":"Are all devices protected with a password or PIN?","hint":"Prevents access if lost/stolen."},
-        {"id":"dd_fde","text":"Is full-disk encryption enabled on laptops and mobiles?","hint":"Keeps data safe if stolen."},
-        {"id":"dd_edr","text":"Is reputable AV/EDR installed and active on all devices?","hint":"Defender, CrowdStrike, SentinelOne."},
-        {"id":"dd_backup","text":"Are important business files backed up regularly?","hint":"Automated or cloud/offsite."},
-        {"id":"dd_restore","text":"Are backups tested to ensure restore works?","hint":"Practice restore occasionally."},
-        {"id":"dd_usb","text":"Are staff trained to handle suspicious files/USBs?","hint":"Unknown USBs, strange attachments."},
-        {"id":"dd_wifi","text":"Are company devices separated from personal on Wi-Fi?","hint":"Guest vs corporate network."},
+        {"id":"dd_lock","text":"Are all devices protected with a password or PIN?","hint":"Enable auto-lock ≤10 minutes; find-my-device."},
+        {"id":"dd_fde","text":"Is full-disk encryption enabled on laptops and mobiles?","hint":"BitLocker, FileVault, Android/iOS encryption."},
+        {"id":"dd_edr","text":"Is reputable AV/EDR installed and active on all devices?","hint":"Microsoft Defender, CrowdStrike, SentinelOne."},
+        {"id":"dd_backup","text":"Are important business files backed up regularly?","hint":"3-2-1 rule: 3 copies, 2 media, 1 offsite (cloud counts)."},
+        {"id":"dd_restore","text":"Are backups tested to ensure restore works?","hint":"Restore one file/VM quarterly; script it if possible."},
+        {"id":"dd_usb","text":"Are staff trained to handle suspicious files/USBs?","hint":"Block unknown USBs; preview links before clicking."},
+        {"id":"dd_wifi","text":"Are company devices separated from personal on Wi-Fi?","hint":"Separate SSIDs (Corp vs Guest); VLANs where possible."},
     ]
 }
 SECTION_5 = {
@@ -271,10 +279,10 @@ SECTION_5 = {
     "title":"🧩 System & Software Updates",
     "purpose":"Keeping systems patched and supported.",
     "questions":[
-        {"id":"su_os_auto","text":"Are operating systems kept up to date automatically?","hint":"Enable security patches."},
-        {"id":"su_apps","text":"Are business applications updated regularly?","hint":"Browsers, CRM, accounting, etc."},
-        {"id":"su_unsupported","text":"Any devices running unsupported/outdated systems?","hint":"e.g., Win7, old Android."},
-        {"id":"su_review","text":"Is there a monthly process/reminder to review updates?","hint":"Alerts or MSP checks."},
+        {"id":"su_os_auto","text":"Are operating systems kept up to date automatically?","hint":"Turn on auto-update; MDM helps enforce."},
+        {"id":"su_apps","text":"Are business applications updated regularly?","hint":"Browsers, accounting, CRM, PoS; prefer auto-update channels."},
+        {"id":"su_unsupported","text":"Any devices running unsupported/outdated systems?","hint":"Replace/upgrade old OS versions; isolate until replaced."},
+        {"id":"su_review","text":"Is there a monthly process/reminder to review updates?","hint":"Calendar task, RMM/MSP report, or patch-Tuesday checklist."},
     ]
 }
 SECTION_6 = {
@@ -282,11 +290,11 @@ SECTION_6 = {
     "title":"🚨 Incident Preparedness",
     "purpose":"Readiness to detect, respond, and recover.",
     "questions":[
-        {"id":"ip_report","text":"Do employees know how to report incidents?","hint":"Phishing, data loss, suspicious activity."},
-        {"id":"ip_plan","text":"Do you have a simple incident response plan?","hint":"Even a short checklist helps."},
-        {"id":"ip_log","text":"Are incident details documented when they occur?","hint":"What happened, when, impact."},
-        {"id":"ip_contacts","text":"Are key staff aware of emergency contacts?","hint":"Internal IT, MSP, specialist."},
-        {"id":"ip_test","text":"Have you tested/simulated handling a cyber incident?","hint":"Quick tabletop exercise."},
+        {"id":"ip_report","text":"Do employees know how to report incidents or suspicious activity?","hint":"Phishing mailbox (phish@), Slack ‘#security’, service desk."},
+        {"id":"ip_plan","text":"Do you have a simple incident response plan?","hint":"1-page checklist: who to call, what to collect, who to notify."},
+        {"id":"ip_log","text":"Are incident details documented when they occur?","hint":"What/when/who/impact; use a ticketing template."},
+        {"id":"ip_contacts","text":"Are key contacts known for emergencies?","hint":"Internal IT, MSP, cyber insurer, legal, data-protection contact."},
+        {"id":"ip_test","text":"Have you tested or simulated a cyber incident?","hint":"30-minute tabletop twice a year; refine the plan afterwards."},
     ]
 }
 SECTION_7 = {
@@ -294,11 +302,11 @@ SECTION_7 = {
     "title":"☁️ Vendor & Cloud Security",
     "purpose":"Security of third-party tools, vendors, and online services.",
     "questions":[
-        {"id":"vc_cloud","text":"Do you use cloud tools to store company data?","hint":"M365, Google Drive, Dropbox."},
-        {"id":"vc_mfa","text":"Are those cloud services protected with MFA & strong passwords?","hint":"Prevent unauthorised access."},
-        {"id":"vc_review","text":"Do you review how vendors protect your data?","hint":"DPAs, security terms."},
-        {"id":"vc_access","text":"Do you track which suppliers have access to systems/data?","hint":"Maintain an access list."},
-        {"id":"vc_notify","text":"If a vendor suffers an incident, will you be informed promptly?","hint":"Breach notification clauses."},
+        {"id":"vc_cloud","text":"Do you use cloud tools to store company data?","hint":"M365, Google Workspace, Dropbox, sector SaaS (ERP, EHR, PoS)."},
+        {"id":"vc_mfa","text":"Are cloud accounts protected with MFA and strong passwords?","hint":"Enforce tenant-wide MFA; require it for all admins."},
+        {"id":"vc_review","text":"Do you review how vendors protect your data?","hint":"Check DPA, data location, certifications (ISO 27001, SOC 2)."},
+        {"id":"vc_access","text":"Do you track which suppliers have access to systems/data?","hint":"Maintain a shared list; remove unused integrations."},
+        {"id":"vc_notify","text":"Will vendors notify you promptly if they have a breach?","hint":"Breach-notification clause + tested contact path."},
     ]
 }
 SECTION_8 = {
@@ -306,11 +314,11 @@ SECTION_8 = {
     "title":"🧠 Awareness & Training",
     "purpose":"Cybersecurity culture and user awareness.",
     "questions":[
-        {"id":"at_training","text":"Have employees received cybersecurity awareness training?","hint":"Short online sessions count."},
-        {"id":"at_phish","text":"Do staff know how to identify phishing/scam emails?","hint":"Links, sender, errors."},
-        {"id":"at_onboard","text":"Are new employees briefed on cybersecurity at onboarding?","hint":"Consistency from day one."},
-        {"id":"at_reminders","text":"Do you share posters, reminders, or tips?","hint":"Newsletter or checklist."},
-        {"id":"at_lead","text":"Does management regularly promote cybersecurity?","hint":"Leadership buy-in matters."},
+        {"id":"at_training","text":"Have employees received any cybersecurity training?","hint":"Short e-learning or live session; track completion."},
+        {"id":"at_phish","text":"Do staff know how to spot phishing or scam emails?","hint":"Check sender, link URL, urgency, attachments; report quickly."},
+        {"id":"at_onboard","text":"Are new employees briefed during onboarding?","hint":"Add a 15-minute security starter; include password manager."},
+        {"id":"at_reminders","text":"Do you share posters, reminders, or tips?","hint":"Monthly internal post: MFA, updates, phishing examples."},
+        {"id":"at_lead","text":"Does management actively promote cybersecurity?","hint":"Leaders mention it in all-hands; ask for MFA completion."},
     ]
 }
 SECTION_GOV = {
@@ -349,12 +357,13 @@ def section_score(section):
     score = sum(risk.get(v,1) for v in vals)
     return round(score/len(vals), 2) if vals else 0.0
 
+# >>> CHANGE #1: Governance is always included (standard)
 def pick_active_sections(tags:set):
     active = set()
-    active |= BASELINE_IDS  # always on
+    active |= BASELINE_IDS                # always on
+    active.add("Governance")              # Governance standard for every org
     if "size:Small" in tags or "size:Medium" in tags:
         active.add("Incident Preparedness")
-        active.add("Governance")
     if any(t in tags for t in ["infra:cloud","system:pos","geo:crossborder"]):
         active.add("Vendor & Cloud")
     order = [s["id"] for s in ALL_SECTIONS]
@@ -502,7 +511,6 @@ if st.session_state.page == "Step 1":
                     "✍️ Specify other scheme",
                     value=st.session_state.certifications_other
                 )
-        # PCI quick flag
         st.session_state.bp_card_payments = st.radio(
             "💳 Do you accept or process card payments (online or in-store)?",
             ["Yes","No","Not sure"],
@@ -511,7 +519,6 @@ if st.session_state.page == "Step 1":
                    if st.session_state.bp_card_payments else 1)
         )
 
-        # Required gate
         missing = []
         if not st.session_state.person_name.strip(): missing.append("name")
         if not st.session_state.company_name.strip(): missing.append("company")
@@ -799,59 +806,7 @@ if st.session_state.page == "Detailed":
             st.session_state.page = "Report"; st.rerun()
 
 # ─────────────────────────────────────────────────────────────
-# Export helpers (Markdown + PDF)
-# ─────────────────────────────────────────────────────────────
-def _latin(s:str)->str:
-    return s.encode("latin-1","ignore").decode("latin-1")
-
-try:
-    from fpdf import FPDF
-except Exception:
-    FPDF = None
-
-def build_markdown_report(state: dict, plan: dict, scores: dict) -> str:
-    lines = []
-    lines.append("# SME Cybersecurity Self-Assessment — Summary & Action Plan")
-    lines.append("")
-    lines.append("## Snapshot")
-    lines.append(f"- Business: {state.get('company_name','—')}")
-    lines.append(f"- Region: {state.get('business_region','—')}")
-    lines.append(f"- Industry: {state.get('industry','—')}")
-    lines.append(f"- Size (derived): {state.get('derived_size','—')}")
-    lines.append("")
-    if scores:
-        lines.append("## Section status")
-        for sid, sc in scores.items():
-            level = 'Low' if sc < 0.5 else 'Medium' if sc < 1.2 else 'High'
-            lines.append(f"- {sid}: {level} (score {sc})")
-        lines.append("")
-    lines.append("## Action plan")
-    lines.append("### Quick wins")
-    for x in plan.get("quick",[]): lines.append(f"- {x}")
-    lines.append("### Foundations")
-    for x in plan.get("foundations",[]): lines.append(f"- {x}")
-    lines.append("### Next-level / compliance")
-    for x in plan.get("nextlvl",[]): lines.append(f"- {x}")
-    return "\n".join(lines)
-
-def build_pdf_from_markdown(md_text: str) -> bytes | None:
-    if FPDF is None: return None
-    pdf = FPDF(); pdf.set_auto_page_break(auto=True, margin=15); pdf.add_page()
-    def h1(t): pdf.set_font("Helvetica","B",16); pdf.multi_cell(0,8,_latin(t)); pdf.ln(2)
-    def h2(t): pdf.set_font("Helvetica","B",14); pdf.multi_cell(0,7,_latin(t)); pdf.ln(1)
-    def p(t, sz=12): pdf.set_font("Helvetica","",sz); pdf.multi_cell(0,6,_latin(t))
-    for line in md_text.splitlines():
-        if line.startswith("# "): h1(line[2:])
-        elif line.startswith("## "): h2(line[3:])
-        elif line.startswith("### "): pdf.set_font("Helvetica","B",12); pdf.multi_cell(0,6,_latin(line[4:]))
-        elif line.startswith("- "): pdf.set_font("Helvetica","",12); pdf.multi_cell(0,6,_latin(line))
-        elif line.strip()=="": pdf.ln(1)
-        else: p(line)
-    out = pdf.output(dest="S")
-    return bytes(out) if isinstance(out, (bytes, bytearray)) else out.encode("latin-1","ignore")
-
-# ─────────────────────────────────────────────────────────────
-# Final Report (includes Governance-driven plan + export + phish preview)
+# Final Report (Governance already influences actions through scores)
 # ─────────────────────────────────────────────────────────────
 if st.session_state.page == "Report":
     st.markdown("## Recommendations & Section Scores")
@@ -874,7 +829,6 @@ if st.session_state.page == "Report":
     t = compute_tags()
     actions_quick, actions_found, actions_next = [], [], []
 
-    # Baseline-driven
     if (st.session_state.df_website == "Yes") and (st.session_state.df_https != "Yes"):
         actions_quick.append("Enable HTTPS and force redirect from HTTP to HTTPS.")
     if st.session_state.df_email in ("No","Partially"):
@@ -884,7 +838,6 @@ if st.session_state.page == "Report":
     if (st.session_state.bp_byod in ("Yes","Sometimes")):
         actions_found.append("Define a BYOD policy: screen lock, OS updates, encryption, MFA for email/apps.")
 
-    # Tag-driven
     actions_found.append("Turn on automatic OS & app updates; remove unsupported systems.")
     actions_found.append("Automate backups and test a restore quarterly.")
     if any(x in t for x in ["infra:cloud","system:pos","geo:crossborder"]):
@@ -894,7 +847,6 @@ if st.session_state.page == "Report":
     if any(x in t for x in ["geo:eu","geo:uk"]):
         actions_next.append("Document GDPR basics: Records of Processing, DPAs, and a contact for data requests.")
 
-    # Governance-driven (from detailed score if present)
     g_score = scores.get("Governance")
     if g_score is not None:
         if g_score >= 1.2:
@@ -923,41 +875,6 @@ if st.session_state.page == "Report":
     st.markdown('<div class="card"><ul style="margin:.25rem 1rem">'+ "".join([f"<li>{x}</li>" for x in actions_found[:8]]) + "</ul></div>", unsafe_allow_html=True)
     st.markdown("#### 🚀 Next-level / compliance")
     st.markdown('<div class="card"><ul style="margin:.25rem 1rem">'+ "".join([f"<li>{x}</li>" for x in actions_next[:8]]) + "</ul></div>", unsafe_allow_html=True)
-
-    # Export (Markdown / PDF)
-    st.markdown("---")
-    st.markdown("### Export")
-    state_for_export = {
-        "company_name": st.session_state.get("company_name","—"),
-        "business_region": st.session_state.get("business_region","—"),
-        "industry": resolved_industry(),
-        "derived_size": org_size(),
-    }
-    plan_dict = {"quick": actions_quick, "foundations": actions_found, "nextlvl": actions_next}
-    md = build_markdown_report(state_for_export, plan_dict, scores)
-    st.download_button("📄 Download summary (Markdown)", data=md.encode("utf-8"), file_name="cyber-assessment.md")
-    pdf = build_pdf_from_markdown(md)
-    if pdf:
-        st.download_button("📘 Download summary (PDF)", data=pdf, file_name="cyber-assessment.pdf", mime="application/pdf")
-    else:
-        st.caption("PDF engine not available — using Markdown export.")
-
-    # Optional: phish preview (content only, no config changes)
-    with st.expander("🎣 Try a quick phishing-email preview"):
-        st.markdown("**Subject:** Urgent: Verify your payroll account before 5PM")
-        st.markdown("**From:** HR Department <hr@payroll-update-secure.com>")
-        st.write("We’re finalising payroll today. Please verify your account immediately.\nFailure to act will result in payment delay.\nClick below to confirm your details.")
-        st.button("Open (disabled)", disabled=True)
-        picks = st.multiselect(
-            "What looks suspicious? (select all that apply)",
-            ["Urgent tone / deadline","Suspicious link domain","Generic greeting","Missing company logo"]
-        )
-        flags = {"Urgent tone / deadline","Suspicious link domain","Generic greeting"}
-        if picks:
-            correct = [p for p in picks if p in flags]
-            extras = [p for p in picks if p not in flags]
-            if correct: st.success("Good catch: " + ", ".join(correct))
-            if extras: st.info("Logos/signatures can be faked; most important are domain, urgency, and unusual requests.")
 
     st.markdown("")
     c1, c2 = st.columns([1,1])
