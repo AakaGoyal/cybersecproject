@@ -12,17 +12,18 @@ st.markdown("""
   .block-container {max-width: 1160px; padding-top: 2.25rem !important;}
   .main > div:first-child {padding-top: 2.25rem !important;}
 
-  /* Larger, clearer headings */
-  h1 {font-size: 2.15rem !important; letter-spacing:.1px;}
+  /* Clear, readable headings */
+  h1 {font-size: 2.10rem !important; letter-spacing:.1px;}
   h2 {font-size: 1.55rem !important;}
   h3 {font-size: 1.25rem !important;}
   h4 {font-size: 1.05rem !important;}
 
   .lead {color:#374151; margin:.35rem 0 .9rem; font-size:1.05rem}
-  /* Darker, readable helper/advice text with italics */
-  .hint {color:#374151; font-size:1.0rem; margin:.15rem 0 .55rem; font-style:italic}
-  .explain {color:#374151; font-size:1.0rem; margin:.15rem 0 .6rem}
-  .explain ul {margin:.1rem 0 .2rem 1.1rem}
+
+  /* Question helper text: smaller than the question, high-contrast, italic */
+  .hint {color:#374151; font-size:.96rem; margin:.2rem 0 .7rem; font-style:italic}
+  .explain {color:#374151; font-size:1.0rem; margin:.25rem 0 .6rem}
+  .explain ul {margin:.2rem 0 .2rem 1.1rem}
   .explain li {margin:.1rem 0}
 
   /* Chips / pills */
@@ -47,7 +48,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────
-# Options & content
+# Options & text
 # ─────────────────────────────────────────────────────────────
 EMPLOYEE_RANGES = ["1–5", "6–10", "10–25", "26–50", "51–100", "More than 100"]
 YEARS_OPTIONS   = ["<1 year", "1–3 years", "3–5 years", "5–10 years", "10+ years"]
@@ -92,35 +93,35 @@ CERTIFICATION_OPTIONS = [
 
 DATA_TYPE_HELP = {
     "Customer personal data (PII)": "Names, emails, phone numbers, addresses, IDs, online identifiers.",
-    "Employee/staff data": "HR information such as contracts, payroll, performance, IDs, contact details.",
-    "Health/medical data": "Patient/health information (diagnosis, treatment, insurance).",
-    "Financial/transaction data": "Invoices, bank details, card tokens, PoS records, refunds."
+    "Employee/staff data": "HR info (contracts, payroll, performance, IDs, contact details).",
+    "Health/medical data": "Any health info or patient records (diagnosis, treatment, insurance).",
+    "Financial/transaction data": "Invoices, bank details, card tokens, PoS records, refunds.",
 }
 
 SECTION_INTRO = {
     "Access & Identity": [
         "What this covers: who can access what, how safely (passwords, MFA, admin rights, removing ex-staff).",
-        "Why it matters: most breaches start with weak or reused passwords."
+        "Why it matters: most breaches start with weak or reused passwords.",
     ],
     "Device & Data": [
         "What this covers: device protection, full-disk encryption, antivirus/EDR, backups and restores.",
-        "Why it matters: a lost or stolen device shouldn’t expose your business data."
+        "Why it matters: a lost or stolen device shouldn’t expose your business data.",
     ],
     "System & Software Updates": [
         "What this covers: OS and application updates; avoiding unsupported systems.",
-        "Why it matters: patches close well-known holes that attackers scan for."
+        "Why it matters: patches close well-known holes that attackers scan for.",
     ],
     "Incident Preparedness": [
         "What this covers: reporting, a simple response plan, key contacts, quick practice.",
-        "Why it matters: clear steps reduce damage and downtime."
+        "Why it matters: clear steps reduce damage and downtime.",
     ],
     "Vendor & Cloud": [
         "What this covers: MFA on cloud tools, contract terms, who has access, breach notification.",
-        "Why it matters: suppliers and SaaS are part of your security posture."
+        "Why it matters: suppliers and SaaS are part of your security posture.",
     ],
     "Awareness & Training": [
         "What this covers: training basics, spotting phishing, onboarding, reminders, leadership support.",
-        "Why it matters: people prevent most attacks."
+        "Why it matters: people prevent most attacks.",
     ],
 }
 
@@ -252,7 +253,7 @@ def overall_badge():
     if score<=3: return ("Medium","amber","Balanced setup. A few quick wins will reduce risk fast.")
     return ("High","red","Higher exposure — prioritise quick actions to lower risk.")
 
-def go(page): st.session_state.page=page; st.rerun()
+def go(page): st.session_state.page=page  # no rerun here; we use the standard button pattern
 
 # ─────────────────────────────────────────────────────────────
 # Sections & questions (Tier-2)
@@ -261,47 +262,47 @@ def section(title_id, qlist):
     return {"id":title_id, "title":title_id, "questions":qlist}
 
 SECTION_3 = section("Access & Identity", [
-    {"id":"ai_pw","t":"Are strong passwords required for all accounts?","h":"Use at least 10–12 characters and avoid reuse."},
-    {"id":"ai_mfa","t":"Is Multi-Factor Authentication (MFA) enabled for key accounts?","h":"Password plus a second step (app/token)."},
-    {"id":"ai_admin","t":"Are admin rights limited to only those who need them?","h":"Restrict and monitor privileged roles."},
-    {"id":"ai_shared","t":"Are shared accounts avoided or controlled?","h":"Avoid generic 'admin@' logins; use named accounts."},
-    {"id":"ai_leavers","t":"Are old or unused accounts removed promptly?","h":"Remove access for leavers and contractors quickly."},
+    {"id":"ai_pw","t":"Are strong passwords required for all accounts?","h":"Use at least 10–12 characters, avoid reuse. Tip: a password manager helps."},
+    {"id":"ai_mfa","t":"Is Multi-Factor Authentication (MFA) enabled for key accounts?","h":"Examples: authenticator app, security key. Start with email, admin, finance."},
+    {"id":"ai_admin","t":"Are admin rights limited to only those who need them?","h":"Grant temporarily, review quarterly, monitor admin sign-ins."},
+    {"id":"ai_shared","t":"Are shared accounts avoided or controlled?","h":"Prefer named accounts; if shared, rotate passwords and log usage."},
+    {"id":"ai_leavers","t":"Are old or unused accounts removed promptly?","h":"Disable the same day a person leaves; reclaim devices and keys."},
 ])
 SECTION_4 = section("Device & Data", [
-    {"id":"dd_lock","t":"Are all laptops/phones protected with a password or PIN?","h":"Prevents access if a device is lost or stolen."},
-    {"id":"dd_fde","t":"Is full-disk encryption enabled on laptops and mobiles?","h":"Keeps data safe even if a device is stolen."},
-    {"id":"dd_edr","t":"Is reputable antivirus/EDR installed and active on all devices?","h":"Examples: Microsoft Defender, CrowdStrike."},
-    {"id":"dd_backup","t":"Are important business files backed up regularly?","h":"Automated cloud or offsite backups are easiest."},
-    {"id":"dd_restore","t":"Are backups tested so you know restore works?","h":"Try a small restore occasionally."},
-    {"id":"dd_usb","t":"Are staff trained to handle suspicious files/USBs?","h":"Don’t plug unknown USBs; be wary of attachments."},
-    {"id":"dd_wifi","t":"Are company devices separated from personal ones on Wi-Fi?","h":"Use separate corporate and guest networks."},
+    {"id":"dd_lock","t":"Are all laptops/phones protected with a password or PIN?","h":"Also enable auto-lock (≤10 minutes) and find-my-device."},
+    {"id":"dd_fde","t":"Is full-disk encryption enabled on laptops and mobiles?","h":"Windows BitLocker, macOS FileVault, Android/iOS device encryption."},
+    {"id":"dd_edr","t":"Is reputable antivirus/EDR installed and active on all devices?","h":"Examples: Microsoft Defender, CrowdStrike, SentinelOne."},
+    {"id":"dd_backup","t":"Are important business files backed up regularly?","h":"3-2-1 rule: 3 copies, 2 media, 1 offsite (cloud counts)."},
+    {"id":"dd_restore","t":"Are backups tested so you know restore works?","h":"Try restoring one file/VM quarterly; script it if possible."},
+    {"id":"dd_usb","t":"Are staff trained to handle suspicious files/USBs?","h":"Block unknown USBs; preview links before clicking."},
+    {"id":"dd_wifi","t":"Are company devices separated from personal ones on Wi-Fi?","h":"Use separate SSIDs: ‘Corp’ vs ‘Guest’; VLANs where possible."},
 ])
 SECTION_5 = section("System & Software Updates", [
-    {"id":"su_os_auto","t":"Are operating systems kept up to date automatically?","h":"Enable automatic security patches."},
-    {"id":"su_apps","t":"Are business apps updated regularly?","h":"Browsers, CRM, accounting, PoS, etc."},
-    {"id":"su_unsupported","t":"Any devices running unsupported/outdated systems?","h":"E.g., Windows 7, old Android versions."},
-    {"id":"su_review","t":"Do you have a monthly reminder to review updates?","h":"Automatic alerts or MSP checks are fine."},
+    {"id":"su_os_auto","t":"Are operating systems kept up to date automatically?","h":"Turn on auto-update in Windows/macOS; MDM helps enforce."},
+    {"id":"su_apps","t":"Are business apps updated regularly?","h":"Browsers, accounting, CRM, PoS; prefer auto-update channels."},
+    {"id":"su_unsupported","t":"Any devices running unsupported/outdated systems?","h":"Replace/upgrade old OS versions; isolate until replaced."},
+    {"id":"su_review","t":"Do you have a monthly reminder to review updates?","h":"Calendar task, RMM/MSP report, or patch-tuesday checklist."},
 ])
 SECTION_6 = section("Incident Preparedness", [
-    {"id":"ip_report","t":"Do employees know how to report incidents or suspicious activity?","h":"E.g., phishing emails, data loss."},
-    {"id":"ip_plan","t":"Do you have a simple incident response plan?","h":"Even a one-page checklist helps."},
-    {"id":"ip_log","t":"Are incident details recorded when they occur?","h":"What happened, when, and the impact."},
-    {"id":"ip_contacts","t":"Are key contacts known for emergencies?","h":"Internal IT, MSP, or external specialist."},
-    {"id":"ip_test","t":"Have you tested or simulated a cyber incident?","h":"A 30-minute tabletop builds confidence."},
+    {"id":"ip_report","t":"Do employees know how to report incidents or suspicious activity?","h":"E.g., phishing mailbox (phish@), Slack ‘#security’, service desk."},
+    {"id":"ip_plan","t":"Do you have a simple incident response plan?","h":"1-page checklist: who to call, what to collect, who to notify."},
+    {"id":"ip_log","t":"Are incident details recorded when they occur?","h":"What/when/who/impact; template in your ticketing system helps."},
+    {"id":"ip_contacts","t":"Are key contacts known for emergencies?","h":"Internal IT, MSP, cyber insurer, legal, data-protection contact."},
+    {"id":"ip_test","t":"Have you tested or simulated a cyber incident?","h":"30-minute tabletop twice a year; refine the plan afterwards."},
 ])
 SECTION_7 = section("Vendor & Cloud", [
-    {"id":"vc_cloud","t":"Do you use cloud tools to store company data?","h":"M365, Google Workspace, Dropbox, industry SaaS."},
-    {"id":"vc_mfa","t":"Are cloud accounts protected with MFA and strong passwords?","h":"Turn on MFA for all admin and user accounts."},
-    {"id":"vc_review","t":"Do you review how vendors protect your data?","h":"Check DPAs, security terms and certifications."},
-    {"id":"vc_access","t":"Do you track which suppliers have access to systems/data?","h":"Maintain a current access list."},
-    {"id":"vc_notify","t":"Will vendors notify you promptly if they have a breach?","h":"Ensure contracts have breach-notification clauses."},
+    {"id":"vc_cloud","t":"Do you use cloud tools to store company data?","h":"M365, Google Workspace, Dropbox, sector SaaS (ERP, EHR, PoS)."},
+    {"id":"vc_mfa","t":"Are cloud accounts protected with MFA and strong passwords?","h":"Enforce tenant-wide MFA; require it for all admins."},
+    {"id":"vc_review","t":"Do you review how vendors protect your data?","h":"Check DPA, data location, certifications (ISO 27001, SOC 2)."},
+    {"id":"vc_access","t":"Do you track which suppliers have access to systems/data?","h":"Maintain a shared list; remove unused integrations."},
+    {"id":"vc_notify","t":"Will vendors notify you promptly if they have a breach?","h":"Breach-notification clause + contact path tested once a year."},
 ])
 SECTION_8 = section("Awareness & Training", [
-    {"id":"at_training","t":"Have employees received any cybersecurity training?","h":"Even short online sessions count."},
-    {"id":"at_phish","t":"Do staff know how to spot phishing or scam emails?","h":"Check links, sender, tone and spelling."},
-    {"id":"at_onboard","t":"Are new employees briefed during onboarding?","h":"Consistency from day one."},
-    {"id":"at_reminders","t":"Do you share posters, reminders, or tips?","h":"Monthly nudges keep awareness fresh."},
-    {"id":"at_lead","t":"Does management actively promote cybersecurity?","h":"Leadership buy-in builds culture."},
+    {"id":"at_training","t":"Have employees received any cybersecurity training?","h":"Short e-learning or live session; track completion."},
+    {"id":"at_phish","t":"Do staff know how to spot phishing or scam emails?","h":"Check sender, link URL, urgency, attachments; report quickly."},
+    {"id":"at_onboard","t":"Are new employees briefed during onboarding?","h":"Add a 15-minute security starter; include password manager."},
+    {"id":"at_reminders","t":"Do you share posters, reminders, or tips?","h":"Monthly internal post: MFA, updates, phishing examples."},
+    {"id":"at_lead","t":"Does management actively promote cybersecurity?","h":"Leaders mention it in all-hands; ask for MFA completion."},
 ])
 ALL_SECTIONS=[SECTION_3,SECTION_4,SECTION_5,SECTION_6,SECTION_7,SECTION_8]
 BASELINE_IDS={"Access & Identity","Device & Data","System & Software Updates","Awareness & Training"}
@@ -349,11 +350,20 @@ def applicable_compliance(tags:set):
     return hints
 
 # ─────────────────────────────────────────────────────────────
-# UI helpers — progress bar
+# UI helpers — progress bars
 # ─────────────────────────────────────────────────────────────
 def progress(step: int, total: int = 4, label: str = ""):
     pct = max(0, min(step, total)) / total
     st.progress(pct, text=label or f"Step {step} of {total}")
+
+def detailed_dynamic_progress(active_sections: List[dict]):
+    total = sum(len(s["questions"]) for s in active_sections)
+    answered = 0
+    for s in active_sections:
+        for q in s["questions"]:
+            if st.session_state.get(q["id"]): answered += 1
+    pct = (answered / total) if total else 0
+    st.progress(pct, text=f"Detailed assessment — {answered}/{total} answered")
 
 # ─────────────────────────────────────────────────────────────
 # LANDING
@@ -369,7 +379,9 @@ if st.session_state.page == "Landing":
     with right:
         st.write("• ⏱️ 10–15 minutes")
         st.write("• 🧪 Safe demos of common scams")
-    if st.button("Start ➜", type="primary"): go("Step 1")
+    if st.button("Start ➜", type="primary"):
+        go("Step 1")
+        st.rerun()
 
 # ─────────────────────────────────────────────────────────────
 # STEP 1 — Business basics
@@ -430,9 +442,11 @@ if st.session_state.page == "Step 1":
         st.markdown('<div class="btnrow">', unsafe_allow_html=True)
         cA, cB = st.columns([1,1])
         with cA:
-            if st.button("⬅ Back"): go("Landing")
+            if st.button("⬅ Back"):
+                go("Landing"); st.rerun()
         with cB:
-            st.button("Continue ➜", type="primary", disabled=len(missing)>0, on_click=lambda: go("Step 2"))
+            if st.button("Continue ➜", type="primary", disabled=len(missing)>0):
+                go("Step 2"); st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────
@@ -518,10 +532,12 @@ if st.session_state.page == "Step 2":
 
     with prev:
         st.write(""); st.write("")
-        if st.button("⬅ Back to Step 1"): go("Step 1")
+        if st.button("⬅ Back to Step 1"):
+            go("Step 1"); st.rerun()
         required = ["bp_it_manager","bp_inventory","bp_byod","bp_sensitive","df_website","df_https","df_email","df_social","df_review"]
         missing = [k for k in required if not st.session_state.get(k)]
-        st.button("Continue ➜", type="primary", disabled=len(missing)>0, on_click=lambda: go("Step 3"))
+        if st.button("Continue ➜", type="primary", disabled=len(missing)>0):
+            go("Step 3"); st.rerun()
 
 # ─────────────────────────────────────────────────────────────
 # STEP 3 — Summary (Initial)
@@ -585,42 +601,45 @@ if st.session_state.page == "Step 3":
 
     c1, c2, c3 = st.columns([1,1,2])
     with c1:
-        if st.button("⬅ Back"): go("Step 2")
+        if st.button("⬅ Back"):
+            go("Step 2"); st.rerun()
     with c2:
         if st.button("Start over"):
             for k,v in defaults.items(): st.session_state[k]=v
-            go("Landing")
+            go("Landing"); st.rerun()
     with c3:
         if st.button("Continue to detailed assessment ➜", type="primary"):
             st.session_state.detailed_sections = pick_active_sections(compute_tags())
-            go("Detailed")
+            go("Detailed"); st.rerun()
 
 # ─────────────────────────────────────────────────────────────
-# STEP 4 — Detailed
+# STEP 4 — Detailed (with dynamic progress)
 # ─────────────────────────────────────────────────────────────
 if st.session_state.page == "Detailed":
-    progress(4, label="Detailed assessment")
-    st.markdown("## 🧩 Detailed Assessment")
-
+    # Build active section list first, then dynamic progress from answers
     active_ids=set(st.session_state.get("detailed_sections", []))
     sections=[s for s in ALL_SECTIONS if s["id"] in active_ids] or [SECTION_3,SECTION_4,SECTION_5,SECTION_8]
+    detailed_dynamic_progress(sections)
+
+    st.markdown("## 🧩 Detailed Assessment")
+
     tabs=st.tabs([("🔐 " if s["id"]=='Access & Identity' else "💻 " if s['id']=='Device & Data' else "🧩 " if s['id']=='System & Software Updates' else "🚨 " if s['id']=='Incident Preparedness' else "☁️ " if s['id']=='Vendor & Cloud' else "🧠 ")+s["id"] for s in sections])
     for tab, s in zip(tabs, sections):
         with tab: render_section(s)
 
     c1,c2 = st.columns([1,2])
     with c1:
-        if st.button("⬅ Back to Summary"): go("Step 3")
+        if st.button("⬅ Back to Summary"):
+            go("Step 3"); st.rerun()
     with c2:
         if st.button("Finish & see action plan ➜", type="primary"):
             st.session_state["detailed_scores"]={s["id"]: section_score(s) for s in sections}
-            go("Report")
+            go("Report"); st.rerun()
 
 # ─────────────────────────────────────────────────────────────
-# REPORT — Action Plan (traffic lights) + PDF export
+# REPORT — Action Plan (traffic lights) + robust export
 # ─────────────────────────────────────────────────────────────
 if st.session_state.page == "Report":
-    progress(4, label="Action plan")
     st.markdown("## 🗺️ Action Plan & Section Status")
 
     scores = st.session_state.get("detailed_scores", {})
@@ -665,60 +684,14 @@ if st.session_state.page == "Report":
 
     st.markdown("### ⚡ Quick wins (do these first)")
     st.markdown("<div class='card'><ul style='margin:.25rem 1rem'>"+ "".join([f"<li>{x}</li>" for x in quick or ['No urgent quick wins detected.']]) +"</ul></div>", unsafe_allow_html=True)
-
     st.markdown("### 🧱 Foundations to build this quarter")
     st.markdown("<div class='card'><ul style='margin:.25rem 1rem'>"+ "".join([f"<li>{x}</li>" for x in foundations]) +"</ul></div>", unsafe_allow_html=True)
-
     st.markdown("### 🚀 Next-level / compliance alignment")
     st.markdown("<div class='card'><ul style='margin:.25rem 1rem'>"+ "".join([f"<li>{x}</li>" for x in nextlvl]) +"</ul></div>", unsafe_allow_html=True)
 
-    # PDF export: initial summary + action plan (concise)
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.units import mm
-    from reportlab.pdfgen import canvas
-    from reportlab.lib.styles import getSampleStyleSheet
-    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, ListFlowable, ListItem
-    from reportlab.lib.enums import TA_LEFT
-    from reportlab.lib import colors
-    from reportlab.lib.styles import ParagraphStyle
-
-    def build_pdf() -> bytes:
-        buf = io.BytesIO()
-        doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=18*mm, rightMargin=18*mm, topMargin=16*mm, bottomMargin=16*mm)
-        styles = getSampleStyleSheet()
-        title = ParagraphStyle('title', parent=styles['Heading1'], fontSize=16, leading=20, spaceAfter=8, alignment=TA_LEFT)
-        h2    = ParagraphStyle('h2', parent=styles['Heading2'], fontSize=13, leading=17, spaceBefore=8, spaceAfter=4)
-        normal= ParagraphStyle('normal', parent=styles['BodyText'], fontSize=10.5, leading=14)
-        italic= ParagraphStyle('italic', parent=normal, fontName='Helvetica-Oblique', textColor=colors.black)
-
-        flow=[]
-
-        # Header
-        flow.append(Paragraph("SME Cybersecurity Self-Assessment", title))
-        flow.append(Paragraph("Initial Summary & Action Plan", h2))
-        flow.append(Spacer(1, 4))
-
-        # Snapshot
-        flow.append(Paragraph("Snapshot", h2))
-        snap_lines = [
-            f"Business: {st.session_state.company_name}",
-            f"Region: {st.session_state.business_region}",
-            f"Industry: {resolved_industry()}",
-            f"People: {st.session_state.employee_range}   |   Years: {st.session_state.years_in_business}",
-            f"Turnover: {st.session_state.turnover_label}   |   Work mode: {st.session_state.work_mode}",
-            f"Derived size: {org_size()}",
-        ]
-        for l in snap_lines: flow.append(Paragraph(l, normal))
-        flow.append(Spacer(1, 6))
-
-        # At-a-glance (as text)
+    # ------- Robust export: try reportlab -> fpdf -> Markdown fallback -------
+    def build_markdown_report() -> str:
         sys,ppl,net = area_rag()
-        flow.append(Paragraph("At-a-glance", h2))
-        for label,val in [("Systems & devices", sys[0]), ("People & access", ppl[0]), ("Online exposure", net[0])]:
-            flow.append(Paragraph(f"{label}: {val}", normal))
-        flow.append(Spacer(1, 6))
-
-        # Strengths / Areas
         strengths=[]
         if st.session_state.df_https=="Yes": strengths.append("Website uses HTTPS.")
         if st.session_state.bp_inventory in ("Yes","Partially"): strengths.append("You keep a device inventory.")
@@ -729,56 +702,139 @@ if st.session_state.page == "Report":
         if st.session_state.bp_sensitive=="Yes": risks.append("Back up key data and protect access with MFA.")
         if st.session_state.df_website=="Yes" and st.session_state.df_https!="Yes": risks.append("Enable HTTPS and redirect HTTP→HTTPS.")
 
-        flow.append(Paragraph("Strengths", h2))
-        flow.append(ListFlowable([ListItem(Paragraph(s, normal)) for s in strengths], bulletType='bullet'))
-        flow.append(Spacer(1, 4))
-        flow.append(Paragraph("Areas to improve", h2))
-        flow.append(ListFlowable([ListItem(Paragraph(s, normal)) for s in risks], bulletType='bullet'))
-        flow.append(Spacer(1, 6))
-
-        # Compliance (concise)
+        lines = []
+        lines.append("# SME Cybersecurity Self-Assessment — Summary & Action Plan")
+        lines.append("")
+        lines.append("## Snapshot")
+        lines.append(f"- Business: {st.session_state.company_name}")
+        lines.append(f"- Region: {st.session_state.business_region}")
+        lines.append(f"- Industry: {resolved_industry()}")
+        lines.append(f"- People: {st.session_state.employee_range} | Years: {st.session_state.years_in_business}")
+        lines.append(f"- Turnover: {st.session_state.turnover_label} | Work mode: {st.session_state.work_mode}")
+        lines.append(f"- Derived size: {org_size()}")
+        lines.append("")
+        lines.append("## At-a-glance")
+        lines.append(f"- Systems & devices: {sys[0]}")
+        lines.append(f"- People & access: {ppl[0]}")
+        lines.append(f"- Online exposure: {net[0]}")
+        lines.append("")
+        lines.append("## Strengths")
+        for s in strengths: lines.append(f"- {s}")
+        lines.append("")
+        lines.append("## Areas to improve")
+        for r in risks: lines.append(f"- {r}")
+        lines.append("")
         notes = applicable_compliance(compute_tags())
         if notes:
-            flow.append(Paragraph("Likely compliance & standards", h2))
+            lines.append("## Likely compliance & standards")
             for n,l,note in notes:
-                flow.append(Paragraph(f"{n} — {l}", normal))
-                flow.append(Paragraph(note, italic))
-            flow.append(Spacer(1, 6))
-
-        # Section status (traffic light words)
+                lines.append(f"- **{n}** — {l}: {note}")
+            lines.append("")
         if scores:
-            flow.append(Paragraph("Section status", h2))
+            lines.append("## Section status")
             for sid in scores.keys():
                 sec = [s for s in ALL_SECTIONS if s["id"]==sid][0]
                 emoji, label, _ = section_light(sec)
-                flow.append(Paragraph(f"{sid}: {emoji} {label}", normal))
+                lines.append(f"- {sid}: {emoji} {label}")
+            lines.append("")
+        lines.append("## Action plan")
+        lines.append("### Quick wins")
+        for x in quick or ["No urgent quick wins detected."]: lines.append(f"- {x}")
+        lines.append("### Foundations")
+        for x in foundations: lines.append(f"- {x}")
+        if nextlvl:
+            lines.append("### Next-level / compliance")
+            for x in nextlvl: lines.append(f"- {x}")
+        return "\n".join(lines)
+
+    def export_button():
+        md = build_markdown_report()
+
+        # Try ReportLab
+        try:
+            from reportlab.lib.pagesizes import A4
+            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+            from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, ListFlowable, ListItem
+            from reportlab.lib.enums import TA_LEFT
+            from reportlab.lib import colors
+
+            buf = io.BytesIO()
+            doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=36, rightMargin=36, topMargin=36, bottomMargin=36)
+            styles = getSampleStyleSheet()
+            title = ParagraphStyle('title', parent=styles['Heading1'], fontSize=16, leading=20, spaceAfter=8, alignment=TA_LEFT)
+            h2    = ParagraphStyle('h2', parent=styles['Heading2'], fontSize=13, leading=17, spaceBefore=8, spaceAfter=4)
+            normal= ParagraphStyle('normal', parent=styles['BodyText'], fontSize=10.5, leading=14)
+            italic= ParagraphStyle('italic', parent=normal, fontName='Helvetica-Oblique', textColor=colors.black)
+
+            # Build a concise PDF from the same content
+            flow=[]
+            flow.append(Paragraph("SME Cybersecurity Self-Assessment", title))
+            flow.append(Paragraph("Initial Summary & Action Plan", h2))
             flow.append(Spacer(1, 6))
 
-        # Action plan
-        flow.append(Paragraph("Action plan", h2))
-        flow.append(Paragraph("Quick wins", normal))
-        flow.append(ListFlowable([ListItem(Paragraph(_strip_html(x), normal)) for x in quick or ["No urgent quick wins detected."]], bulletType='bullet'))
-        flow.append(Paragraph("Foundations", normal))
-        flow.append(ListFlowable([ListItem(Paragraph(_strip_html(x), normal)) for x in foundations], bulletType='bullet'))
-        if nextlvl:
-            flow.append(Paragraph("Next-level / compliance", normal))
-            flow.append(ListFlowable([ListItem(Paragraph(_strip_html(x), normal)) for x in nextlvl], bulletType='bullet'))
+            def add_para(header, items):
+                flow.append(Paragraph(header, h2))
+                if isinstance(items, list):
+                    flow.append(ListFlowable([ListItem(Paragraph(str(x), normal)) for x in items], bulletType='bullet'))
+                else:
+                    flow.append(Paragraph(str(items), normal))
+                flow.append(Spacer(1, 6))
 
-        doc.build(flow)
-        return buf.getvalue()
+            # Parse the markdown chunks minimally
+            lines = md.splitlines()
+            sec = None; buf_items=[]
+            def flush():
+                if sec and buf_items: add_para(sec, buf_items.copy())
 
-    def _strip_html(s: str) -> str:
-        # simple cleanup for <span> tags used in UI
-        return s.replace("<span class='tag'>","(").replace("</span>",")").replace("&nbsp;"," ").replace("&amp;","&").replace("<b>","").replace("</b>","")
+            for ln in lines:
+                if ln.startswith("## "):
+                    flush(); sec = ln[3:]; buf_items=[]; continue
+                if ln.startswith("### "):
+                    flush(); sec = ln[4:]; buf_items=[]; continue
+                if ln.startswith("- "): buf_items.append(ln[2:])
+            flush()
+            doc.build(flow)
+            st.download_button("📄 Download summary + action plan (PDF)", data=buf.getvalue(), file_name="cyber-assessment.pdf", mime="application/pdf")
+            return
+        except Exception:
+            pass
 
-    pdf_bytes = build_pdf()
-    st.download_button("📄 Download summary + action plan (PDF)", data=pdf_bytes, file_name="cyber-assessment.pdf", mime="application/pdf")
+        # Try FPDF
+        try:
+            from fpdf import FPDF
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_auto_page_break(auto=True, margin=15)
+            pdf.set_font("Arial", size=12)
+            for line in md.splitlines():
+                if line.startswith("# "):
+                    pdf.set_font("Arial", "B", 16)
+                    pdf.multi_cell(0, 8, line[2:]); pdf.ln(2); pdf.set_font("Arial", size=12)
+                elif line.startswith("## "):
+                    pdf.set_font("Arial", "B", 14)
+                    pdf.multi_cell(0, 7, line[3:]); pdf.ln(1); pdf.set_font("Arial", size=12)
+                elif line.startswith("### "):
+                    pdf.set_font("Arial", "B", 12)
+                    pdf.multi_cell(0, 6, line[4:]); pdf.set_font("Arial", size=12)
+                else:
+                    pdf.multi_cell(0, 6, line)
+            pdf_bytes = pdf.output(dest="S").encode("latin1")
+            st.download_button("📄 Download summary + action plan (PDF)", data=pdf_bytes, file_name="cyber-assessment.pdf", mime="application/pdf")
+            return
+        except Exception:
+            pass
+
+        # Fallback: Markdown download (always works)
+        st.download_button("⬇️ Download summary + action plan (Markdown)", data=md.encode("utf-8"), file_name="cyber-assessment.md", mime="text/markdown")
+
+    export_button()
 
     # Nav
     c1,c2 = st.columns([1,1])
     with c1:
-        if st.button("⬅ Back to Detailed"): go("Detailed")
+        if st.button("⬅ Back to Detailed"):
+            go("Detailed"); st.rerun()
     with c2:
         if st.button("Start over"):
             for k,v in defaults.items(): st.session_state[k]=v
-            go("Landing")
+            go("Landing"); st.rerun()
