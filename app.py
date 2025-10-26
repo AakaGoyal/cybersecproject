@@ -1,19 +1,12 @@
-# app.py
-# SME Cybersecurity Self-Assessment — Streamlit App
-# - Five-band maturity (0–100) with light domain weighting
-# - Awareness & AI Risk domain included
-# - Standards mapping (ISO/NIST) surfaced in the UI
-# - Guided simulations (safe, read-only)
-# - Local-only processing notice + CSV/Markdown exports
-# - Optional config-driven questions via questions.json (fallback to built-ins)
+# app.py — SME Cybersecurity Self-Assessment (single file)
+# Includes: Awareness & AI Risk domain, 0–100 five-band maturity (light weighting),
+# standards mapping, guided simulations, privacy notice, and CSV/Markdown exports.
 
-import json
 import csv
 from io import StringIO
 from typing import List, Dict, Tuple, Optional
 import datetime as dt
 import streamlit as st
-import os
 
 # ─────────────────────────────────────────────────────────────
 # Page setup & compact theme
@@ -37,24 +30,24 @@ st.markdown("""
   .green{background:var(--green-bg);color:#0f5132;border-color:#cceedd}
   .amber{background:var(--amber-bg);color:#8a6d00;border-color:#ffe7ad}
   .red{background:var(--red-bg);color:#842029;border-color:#ffcccc}
-  .card {border:1px solid var(--line);border-radius:14px;padding:14px;background:var(--card)}
+  .card {border:1px solid var(--line);border-radius:14px;padding:14px;background:#fff}
   .sticky {position: sticky; top: 10px;}
   .score-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
   @media (max-width:1100px){ .score-grid{grid-template-columns:repeat(3,minmax(0,1fr));} }
   @media (max-width:700px){ .score-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
-  .score-card{border:1px solid var(--line);border-radius:16px;padding:14px;background:#fff;}
+  .score-card{border:1px solid var(--line);border-radius:16px;padding:14px;background:#fff}
   .score-title{font-weight:700;margin-bottom:.25rem}
   .meter{height:8px;border-radius:999px;background:#f1f5f9;overflow:hidden;margin-top:.35rem;border:1px solid #e5e7eb}
   .meter > span{display:block;height:100%}
   .meter.green > span{background:var(--green)}
   .meter.amber > span{background:var(--amber)}
   .meter.red > span{background:var(--red)}
-  .status-pill{display:inline-flex;align-items:center;gap:.35rem;padding:.15rem .55rem;border-radius:999px;border:1px solid var(--line); font-weight:600}
+  .status-pill{display:inline-flex;align-items:center;gap:.35rem;padding:.15rem .55rem;border:1px solid var(--line); font-weight:600}
 </style>
 """, unsafe_allow_html=True)
 
 st.title("🛡️ SME Cybersecurity Self-Assessment")
-st.info("**Privacy:** All inputs stay in this session only. No data is sent or stored. Use synthetic or anonymised details when in doubt.")
+st.info("**Privacy:** All inputs stay in this session only. No data is sent or stored. Use synthetic or anonymised details if unsure.")
 
 # ─────────────────────────────────────────────────────────────
 # Constants
@@ -63,13 +56,9 @@ EMPLOYEE_RANGES = ["1–5", "6–10", "10–25", "26–50", "51–100", "More th
 YEARS_OPTIONS   = ["<1 year", "1–3 years", "3–5 years", "5–10 years", "10+ years"]
 WORK_MODE       = ["Local & in-person", "Online / remote", "A mix of both"]
 INDUSTRY_OPTIONS = [
-    "Retail & Hospitality",
-    "Professional / Consulting / Legal / Accounting",
-    "Manufacturing / Logistics",
-    "Creative / Marketing / IT Services",
-    "Health / Wellness / Education",
-    "Public sector / Non-profit",
-    "Other (type below)",
+    "Retail & Hospitality","Professional / Consulting / Legal / Accounting",
+    "Manufacturing / Logistics","Creative / Marketing / IT Services",
+    "Health / Wellness / Education","Public sector / Non-profit","Other (type below)",
 ]
 TURNOVER_OPTIONS = [
     "<€100k","€100k–€200k","€200k–€300k","€300k–€400k","€400k–€500k",
@@ -89,12 +78,11 @@ CRITICAL_SYSTEMS = [
 ]
 WORK_ENVIRONMENTS = ["Local servers", "Cloud apps", "Hybrid"]
 REMOTE_RATIO = ["Mostly on-site", "Hybrid", "Fully remote"]
-DATA_TYPES = ["Customer personal data (PII)", "Employee / staff data",
-              "Health / medical data", "Financial / transaction data"]
+DATA_TYPES = ["Customer personal data (PII)", "Employee / staff data", "Health / medical data", "Financial / transaction data"]
 CROSS_BORDER = ["EU-only", "Includes Non-EU regions", "Unsure"]
 CERTIFICATION_OPTIONS = [
-    "None", "ISO/IEC 27001", "Cyber Essentials (UK)", "SOC 2", "GDPR compliance program",
-    "PCI DSS (Payment Card Industry)", "HIPAA (US healthcare)", "NIS2 readiness", "Other (type below)"
+    "None","ISO/IEC 27001","Cyber Essentials (UK)","SOC 2","GDPR compliance program",
+    "PCI DSS (Payment Card Industry)","HIPAA (US healthcare)","NIS2 readiness","Other (type below)"
 ]
 
 TURNOVER_TO_SIZE = {**{k:"Micro" for k in TURNOVER_OPTIONS[:11]}, **{"€2M–€5M":"Small","€5M–€10M":"Small",">€10M":"Medium"}}
@@ -109,13 +97,13 @@ DOMAIN_WEIGHT = {
     "Vendor & Cloud":1.0, "Awareness & AI Risk":1.2
 }
 STD_MAP = {
-  "Access & Identity": ["NIST: PR.AC", "ISO: A.5/A.8"],
-  "Device & Data": ["NIST: PR.DS/PR.IP", "ISO: A.8/A.12"],
-  "System & Software Updates": ["NIST: PR.IP", "ISO: A.8.8/A.12.6"],
-  "Incident Preparedness": ["NIST: RS/RC", "ISO: A.5.24/A.5.25"],
-  "Vendor & Cloud": ["NIST: ID.SC/PR.AT", "ISO: A.5.19/A.5.20"],
-  "Governance": ["NIST: ID.GV", "ISO: A.5 (org controls)"],
-  "Awareness & AI Risk": ["NIST: PR.AT/ID.BE", "ISO: A.6.3 (awareness)"]
+  "Access & Identity": ["NIST: PR.AC","ISO: A.5/A.8"],
+  "Device & Data": ["NIST: PR.DS/PR.IP","ISO: A.8/A.12"],
+  "System & Software Updates": ["NIST: PR.IP","ISO: A.8.8/A.12.6"],
+  "Incident Preparedness": ["NIST: RS/RC","ISO: A.5.24/A.5.25"],
+  "Vendor & Cloud": ["NIST: ID.SC/PR.AT","ISO: A.5.19/A.5.20"],
+  "Governance": ["NIST: ID.GV","ISO: A.5 (org controls)"],
+  "Awareness & AI Risk": ["NIST: PR.AT/ID.BE","ISO: A.6.3 (awareness)"]
 }
 
 # ─────────────────────────────────────────────────────────────
@@ -123,31 +111,16 @@ STD_MAP = {
 # ─────────────────────────────────────────────────────────────
 defaults = dict(
     page="Step 1",
-    email_for_report="",
-    person_name="", company_name="",
-    sector_label=INDUSTRY_OPTIONS[0], sector_other="",
-    years_in_business=YEARS_OPTIONS[0],
-    employee_range=EMPLOYEE_RANGES[0],
-    turnover_label=TURNOVER_OPTIONS[0],
-    business_region=REGION_OPTIONS[0],
-
-    # Step 1
-    work_mode="",
-
-    # Step 2 – Operational context (mandatory)
-    critical_systems=[], critical_systems_other="",
-    primary_work_env=WORK_ENVIRONMENTS[1],
-    remote_ratio=REMOTE_RATIO[1],
-    data_types=[], cross_border=CROSS_BORDER[0],
-    certifications=["None"], certifications_other="",
-    bp_card_payments="",
-
-    # Step 3 – Baseline Q1–Q9
+    email_for_report="", person_name="", company_name="",
+    sector_label=INDUSTRY_OPTIONS[0], sector_other="", years_in_business=YEARS_OPTIONS[0],
+    employee_range=EMPLOYEE_RANGES[0], turnover_label=TURNOVER_OPTIONS[0],
+    business_region=REGION_OPTIONS[0], work_mode="",
+    critical_systems=[], critical_systems_other="", primary_work_env=WORK_ENVIRONMENTS[1],
+    remote_ratio=REMOTE_RATIO[1], data_types=[], cross_border=CROSS_BORDER[0],
+    certifications=["None"], certifications_other="", bp_card_payments="",
     bp_it_manager="", bp_inventory="", bp_byod="", bp_sensitive="",
     df_website="", df_https="", df_email="", df_social="", df_review="",
-
-    # Detailed & report
-    detailed_sections=[], detailed_scores={}, detailed_scores_pct={},
+    detailed_sections=[], detailed_scores_pct={}
 )
 for k, v in defaults.items():
     st.session_state.setdefault(k, v)
@@ -200,27 +173,27 @@ def section(title_id, questions):
     return {"id":title_id, "title":title_id, "questions":questions}
 
 # ─────────────────────────────────────────────────────────────
-# Built-in question bank (fallback)
+# Question bank (single file)
 # ─────────────────────────────────────────────────────────────
 SECTION_3 = section("Access & Identity", [
-    {"id":"ai_pw","t":"🔑 Are strong passwords required for all accounts?","h":"Weak or reused passwords are a top cause of breaches. Use a manager and 10–12+ chars."},
-    {"id":"ai_mfa","t":"🛡️ Is Multi-Factor Authentication (MFA) enabled for key accounts?","h":"Start with email, admin and finance; prefer an authenticator app or security key over SMS."},
+    {"id":"ai_pw","t":"🔑 Are strong passwords required for all accounts?","h":"Use a password manager; 10–12+ chars per account."},
+    {"id":"ai_mfa","t":"🛡️ Is Multi-Factor Authentication (MFA) enabled for key accounts?","h":"Start with email, admin and finance; prefer app or security key over SMS."},
     {"id":"ai_admin","t":"🧰 Are admin rights limited to only those who need them?","h":"Grant temporarily; review quarterly; monitor unusual admin sign-ins."},
     {"id":"ai_shared","t":"👥 Are shared accounts avoided or controlled?","h":"Prefer named accounts; if shared, rotate passwords, enable MFA, and log usage."},
     {"id":"ai_leavers","t":"🚪 Are old or unused accounts removed promptly?","h":"Disable the same day a person leaves; reclaim devices and keys."},
 ])
 SECTION_4 = section("Device & Data", [
-    {"id":"dd_lock","t":"🔒 Are all devices protected with a password or PIN?","h":"Turn on auto-lock ≤10 minutes and ‘find my device’ so you can wipe remotely."},
+    {"id":"dd_lock","t":"🔒 Are all devices protected with a password or PIN?","h":"Turn on auto-lock ≤10 minutes and ‘find my device’."},
     {"id":"dd_fde","t":"💽 Is full-disk encryption enabled on laptops and mobiles?","h":"Use BitLocker, FileVault, or built-in Android/iOS encryption."},
-    {"id":"dd_edr","t":"🧿 Is reputable antivirus/EDR installed and active on all devices?","h":"Stops malware and flags risky behaviour (e.g., Microsoft Defender)."},
-    {"id":"dd_backup","t":"📦 Are important business files backed up regularly?","h":"Follow 3-2-1: 3 copies, 2 media, 1 offsite (cloud counts)."},
+    {"id":"dd_edr","t":"🧿 Is reputable antivirus/EDR installed and active on all devices?","h":"Stops malware and flags risky behaviour (e.g., MS Defender)."},
+    {"id":"dd_backup","t":"📦 Are important business files backed up regularly?","h":"Follow 3-2-1: 3 copies, 2 media, 1 offsite."},
     {"id":"dd_restore","t":"🧪 Are backups tested so you know restore works?","h":"Try restoring one file/VM quarterly."},
     {"id":"dd_usb","t":"🧰 Are staff trained to handle suspicious files/USBs?","h":"Default-deny where possible; preview links before clicking."},
     {"id":"dd_wifi","t":"📶 Are company devices separated from personal on Wi-Fi?","h":"Guest vs. corporate networks reduce lateral movement."},
 ])
 SECTION_5 = section("System & Software Updates", [
-    {"id":"su_os_auto","t":"♻️ Are operating systems kept up to date automatically?","h":"Most breaches exploit known bugs. Turn on auto-update; MDM helps enforce it."},
-    {"id":"su_apps","t":"🧩 Are business apps updated regularly?","h":"Prefer auto-update channels to close holes quickly."},
+    {"id":"su_os_auto","t":"♻️ Are operating systems kept up to date automatically?","h":"Turn on auto-update; MDM helps enforce it."},
+    {"id":"su_apps","t":"🧩 Are business apps updated regularly?","h":"Prefer auto-update channels."},
     {"id":"su_unsupported","t":"⛔ Any devices running unsupported/outdated systems?","h":"Replace/upgrade or isolate them until replaced."},
     {"id":"su_review","t":"🗓️ Do you have a monthly reminder to review updates?","h":"A 10-minute monthly check catches stragglers."},
 ])
@@ -235,8 +208,8 @@ SECTION_7 = section("Vendor & Cloud", [
     {"id":"vc_cloud","t":"☁️ Do you use cloud tools to store company data?","h":"Know where data lives and who can access it."},
     {"id":"vc_mfa","t":"🔐 Are cloud accounts protected with MFA and strong passwords?","h":"Enforce tenant-wide MFA; require it for all admins."},
     {"id":"vc_review","t":"🔎 Do you review how vendors protect your data?","h":"Check DPAs, security whitepapers and certifications (ISO 27001, SOC 2)."},
-    {"id":"vc_access","t":"📜 Do you track which suppliers have access to systems/data?","h":"Keep a simple list of integrations and permissions; remove unused ones."},
-    {"id":"vc_notify","t":"🚨 Will vendors notify you promptly if they have a breach?","h":"Make sure breach-notification clauses and contacts exist."},
+    {"id":"vc_access","t":"📜 Do you track which suppliers have access to systems/data?","h":"List integrations and permissions; remove unused ones."},
+    {"id":"vc_notify","t":"🚨 Will vendors notify you promptly if they have a breach?","h":"Ensure breach-notification clauses and contacts exist."},
 ])
 SECTION_9 = section("Governance", [
     {"id":"gov_policy","t":"📘 Do you have a short, written security policy approved by leadership?","h":"A page or two: passwords, MFA, updates, incident steps, data handling."},
@@ -248,29 +221,12 @@ SECTION_9 = section("Governance", [
 SECTION_AI = section("Awareness & AI Risk", [
     {"id":"ai_phish","t":"🎣 Do staff practise spotting phish/vish/smishing at least quarterly?","h":"Little-and-often beats annual training; rehearse reporting."},
     {"id":"ai_deepfake","t":"🎭 Are deepfake/voice-clone risks covered in training?","h":"Agree a verification backchannel for high-risk requests."},
-    {"id":"ai_reporting","t":"📮 Is there a simple way to report suspicious messages?","h":"E.g., a mailbox (phish@) or ‘report phish’ button; track usage."},
-    {"id":"ai_awareness","t":"🧠 Are AI-generated content risks explained in plain language?","h":"Polished language ≠ trusted request; verify sender and route."},
-    {"id":"ai_metrics","t":"📊 Do you review basic awareness metrics?","h":"Completion, reporting rate, time-to-report help you tune effort."},
+    {"id":"ai_reporting","t":"📮 Is there a simple way to report suspicious messages?","h":"Mailbox (phish@) or ‘report phish’ button; track usage."},
+    {"id":"ai_awareness","t":"🧠 Are AI-generated content risks explained in plain language?","h":"Polished language ≠ trusted request; verify sender/route."},
+    {"id":"ai_metrics","t":"📊 Do you review basic awareness metrics?","h":"Completion, reporting rate, time-to-report help tune effort."},
 ])
 
-BUILT_IN_SECTIONS = [SECTION_3, SECTION_4, SECTION_5, SECTION_6, SECTION_7, SECTION_9, SECTION_AI]
-
-# ─────────────────────────────────────────────────────────────
-# Optional config: questions.json
-# ─────────────────────────────────────────────────────────────
-def load_sections_from_json(path:str)->Optional[List[Dict]]:
-    if not os.path.exists(path):
-        return None
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        # Expected minimal schema: [{"id": "Access & Identity", "questions":[{"id": "...","t":"...","h":"..."}]}]
-        ok = isinstance(data, list) and all(isinstance(s, dict) and "id" in s and "questions" in s for s in data)
-        return data if ok else None
-    except Exception:
-        return None
-
-ALL_SECTIONS = load_sections_from_json("questions.json") or BUILT_IN_SECTIONS
+ALL_SECTIONS = [SECTION_3, SECTION_4, SECTION_5, SECTION_6, SECTION_7, SECTION_9, SECTION_AI]
 
 # ─────────────────────────────────────────────────────────────
 # Scoring
@@ -281,7 +237,6 @@ def section_score_pct(sec:Dict)->float:
     return round(sum(ANSWER_VAL.get(v,50) for v in vals)/len(vals),2)
 
 def section_light_from_pct(pct:float)->Tuple[str,str,str]:
-    # Map 0–100 to R/A/G used in tiles
     if pct >= 70: return ("🟢","Low","green")
     if pct >= 40: return ("🟡","Medium","amber")
     return ("🔴","High","red")
@@ -374,8 +329,7 @@ def build_csv()->bytes:
             rows.append([sid, pct])
         overall_pct, band = overall_maturity(ALL_SECTIONS)
         rows.append(["Overall maturity", f"{overall_pct}% · {band}"])
-    out = StringIO()
-    w = csv.writer(out)
+    out = StringIO(); w = csv.writer(out)
     for r in rows: w.writerow(r)
     return out.getvalue().encode("utf-8")
 
@@ -667,7 +621,6 @@ if st.session_state.page == "Detailed":
         st.button("⬅ Back to Summary", on_click=lambda: st.session_state.update({"page":"Step 4"}))
     with cB:
         def _finish():
-            # Save both pct and a convenience RAG label if needed
             scores_pct = {s["id"]: section_score_pct(s) for s in ALL_SECTIONS}
             st.session_state["detailed_scores_pct"] = scores_pct
             st.session_state["page"]="Report"
@@ -686,7 +639,6 @@ if st.session_state.page == "Report":
         st.markdown("<div class='score-grid'>", unsafe_allow_html=True)
         for sid, pct in scores_pct.items():
             emoji,label,klass = section_light_from_pct(pct)
-            # meter width maps 0 (High risk) .. 100 (Low risk)
             html = f"""
             <div class="score-card">
               <div class="score-title">{sid}</div>
@@ -701,7 +653,6 @@ if st.session_state.page == "Report":
 
         overall_pct, band = overall_maturity(ALL_SECTIONS)
         st.markdown(f"### 🔭 Overall maturity: **{overall_pct}% · {band}**")
-
     else:
         st.caption("No detailed scores yet.")
 
@@ -732,10 +683,8 @@ if st.session_state.page == "Report":
 
     st.markdown("---")
     st.markdown("### ⬇️ Export results")
-    st.download_button("Download results (CSV)", data=build_csv(), file_name="cyber-assessment-results.csv",
-                       mime="text/csv")
-    st.download_button("Download summary (Markdown)", data=build_markdown_summary().encode("utf-8"),
-                       file_name="cyber-assessment-summary.md", mime="text/markdown")
+    st.download_button("Download results (CSV)", data=build_csv(), file_name="cyber-assessment-results.csv", mime="text/csv")
+    st.download_button("Download summary (Markdown)", data=build_markdown_summary().encode("utf-8"), file_name="cyber-assessment-summary.md", mime="text/markdown")
 
     cA, cB = st.columns(2)
     with cA:
