@@ -714,120 +714,114 @@ if st.session_state.page == "Report":
     st.markdown("<div class='card'><ul style='margin:.25rem 1rem'>"+ "".join([f"<li>{x}</li>" for x in nextlvl]) +"</ul></div>", unsafe_allow_html=True)
 
     # ------- Export helpers -------
-    def build_markdown_report() -> str:
-        sys,ppl,net = area_rag()
-        strengths=[]
-        if st.session_state.df_https=="Yes": strengths.append("Website uses HTTPS.")
-        if st.session_state.bp_inventory in ("Yes","Partially"): strengths.append("You keep a device inventory.")
-        if not strengths: strengths.append("Solid starting point across core practices.")
-        risks=[]
-        if st.session_state.df_email in ("No","Partially"): risks.append("Move to business email and enforce MFA.")
-        if st.session_state.bp_byod in ("Yes","Sometimes"): risks.append("BYOD needs simple device rules and MFA.")
-        if st.session_state.bp_sensitive=="Yes": risks.append("Back up key data and protect access with MFA.")
-        if st.session_state.df_website=="Yes" and st.session_state.df_https!="Yes": risks.append("Enable HTTPS and redirect HTTP→HTTPS.")
+   # ------- Export helpers (REPLACE your existing export helpers with this block) -------
+def build_markdown_report() -> str:
+    sys,ppl,net = area_rag()
+    strengths=[]
+    if st.session_state.df_https=="Yes": strengths.append("Website uses HTTPS.")
+    if st.session_state.bp_inventory in ("Yes","Partially"): strengths.append("You keep a device inventory.")
+    if not strengths: strengths.append("Solid starting point across core practices.")
+    risks=[]
+    if st.session_state.df_email in ("No","Partially"): risks.append("Move to business email and enforce MFA.")
+    if st.session_state.bp_byod in ("Yes","Sometimes"): risks.append("BYOD needs simple device rules and MFA.")
+    if st.session_state.bp_sensitive=="Yes": risks.append("Back up key data and protect access with MFA.")
+    if st.session_state.df_website=="Yes" and st.session_state.df_https!="Yes": risks.append("Enable HTTPS and redirect HTTP→HTTPS.")
 
-        lines = []
-        lines.append("# SME Cybersecurity Self-Assessment — Summary & Action Plan")
+    lines = []
+    lines.append("# SME Cybersecurity Self-Assessment — Summary & Action Plan")
+    lines.append("")
+    lines.append("## Snapshot")
+    lines.append(f"- Business: {st.session_state.company_name}")
+    lines.append(f"- Region: {st.session_state.business_region}")
+    lines.append(f"- Industry: {resolved_industry()}")
+    lines.append(f"- People: {st.session_state.employee_range} | Years: {st.session_state.years_in_business}")
+    lines.append(f"- Turnover: {st.session_state.turnover_label} | Work mode: {st.session_state.work_mode}")
+    lines.append(f"- Derived size: {org_size()}")
+    lines.append("")
+    lines.append("## At-a-glance")
+    lines.append(f"- Systems & devices: {sys[0]}")
+    lines.append(f"- People & access: {ppl[0]}")
+    lines.append(f"- Online exposure: {net[0]}")
+    lines.append("")
+    lines.append("## Strengths")
+    for s in strengths: lines.append(f"- {s}")
+    lines.append("")
+    lines.append("## Areas to improve")
+    for r in risks: lines.append(f"- {r}")
+    lines.append("")
+    notes = applicable_compliance(compute_tags())
+    if notes:
+        lines.append("## Likely compliance & standards")
+        for n,l,note in notes:
+            lines.append(f"- {n} — {l}: {note}")
         lines.append("")
-        lines.append("## Snapshot")
-        lines.append(f"- Business: {st.session_state.company_name}")
-        lines.append(f"- Region: {st.session_state.business_region}")
-        lines.append(f"- Industry: {resolved_industry()}")
-        lines.append(f"- People: {st.session_state.employee_range} | Years: {st.session_state.years_in_business}")
-        lines.append(f"- Turnover: {st.session_state.turnover_label} | Work mode: {st.session_state.work_mode}")
-        lines.append(f"- Derived size: {org_size()}")
+    scores = st.session_state.get("detailed_scores", {})
+    if scores:
+        lines.append("## Section status")
+        for sid in scores.keys():
+            sec = [s for s in ALL_SECTIONS if s['id']==sid][0]
+            emoji, label, _ = section_light(sec)
+            lines.append(f"- {sid}: {emoji} {label}")
         lines.append("")
-        lines.append("## At-a-glance")
-        lines.append(f"- Systems & devices: {sys[0]}")
-        lines.append(f"- People & access: {ppl[0]}")
-        lines.append(f"- Online exposure: {net[0]}")
-        lines.append("")
-        lines.append("## Strengths")
-        for s in strengths: lines.append(f"- {s}")
-        lines.append("")
-        lines.append("## Areas to improve")
-        for r in risks: lines.append(f"- {r}")
-        lines.append("")
-        notes = applicable_compliance(compute_tags())
-        if notes:
-            lines.append("## Likely compliance & standards")
-            for n,l,note in notes:
-                lines.append(f"- {n} — {l}: {note}")
-            lines.append("")
-        if scores:
-            lines.append("## Section status")
-            for sid in scores.keys():
-                sec = [s for s in ALL_SECTIONS if s["id"]==sid][0]
-                emoji, label, _ = section_light(sec)
-                lines.append(f"- {sid}: {emoji} {label}")
-            lines.append("")
-        lines.append("## Action plan")
-        lines.append("### Quick wins")
-        for x in quick or ["No urgent quick wins detected."]: lines.append(f"- {x}")
-        lines.append("### Foundations")
-        for x in foundations: lines.append(f"- {x}")
-        if nextlvl:
-            lines.append("### Next-level / compliance")
-            for x in nextlvl: lines.append(f"- {x}")
-        return "\n".join(lines)
+    lines.append("## Action plan")
+    lines.append("### Quick wins")
+    for x in (st.session_state.get('_quick_list_cache') or []): lines.append(f"- {x}")
+    lines.append("### Foundations")
+    for x in (st.session_state.get('_found_list_cache') or []): lines.append(f"- {x}")
+    if st.session_state.get('_next_list_cache'):
+        lines.append("### Next-level / compliance")
+        for x in st.session_state['_next_list_cache']: lines.append(f"- {x}")
+    return "\n".join(lines)
 
-    def sanitize_for_pdf(text: str) -> str:
-        # fpdf2 core fonts are latin-1; drop characters outside that range (e.g., emojis)
-        return text.encode("latin-1", "ignore").decode("latin-1")
+def _sanitize_latin(text: str) -> str:
+    # fpdf2 core fonts are latin-1; drop anything outside to avoid crashes (emojis etc.)
+    return text.encode("latin-1", "ignore").decode("latin-1")
 
-    def export_button():
-        md = build_markdown_report()
-        # Try fpdf2 first (installed via requirements)
-        try:
-            from fpdf import FPDF
-            pdf = FPDF()
-            pdf.set_auto_page_break(auto=True, margin=15)
-            pdf.add_page()
+def export_button():
+    md = build_markdown_report()
 
-            def add_h1(t):
-                pdf.set_font("Helvetica", "B", 16); pdf.multi_cell(0, 8, sanitize_for_pdf(t)); pdf.ln(2)
-            def add_h2(t):
-                pdf.set_font("Helvetica", "B", 14); pdf.multi_cell(0, 7, sanitize_for_pdf(t)); pdf.ln(1)
-            def add_p(t, sz=12):
-                pdf.set_font("Helvetica", "", sz); pdf.multi_cell(0, 6, sanitize_for_pdf(t))
+    # 1) Try fpdf2 if present
+    try:
+        from fpdf import FPDF  # fpdf2
+        pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=15)
+        pdf.add_page()
 
-            add_h1("SME Cybersecurity Self-Assessment")
-            add_h2("Initial Summary & Action Plan"); pdf.ln(2)
+        def add_h1(t): pdf.set_font("Helvetica","B",16); pdf.multi_cell(0,8, _sanitize_latin(t)); pdf.ln(2)
+        def add_h2(t): pdf.set_font("Helvetica","B",14); pdf.multi_cell(0,7, _sanitize_latin(t)); pdf.ln(1)
+        def add_p(t, sz=12): pdf.set_font("Helvetica","",sz); pdf.multi_cell(0,6, _sanitize_latin(t))
 
-            # Very small parser over our markdown to keep layout simple and robust
-            for line in md.splitlines():
-                if line.startswith("# "):
-                    add_h1(line[2:])
-                elif line.startswith("## "):
-                    add_h2(line[3:])
-                elif line.startswith("### "):
-                    pdf.set_font("Helvetica", "B", 12); pdf.multi_cell(0, 6, sanitize_for_pdf(line[4:]))
-                elif line.startswith("- "):
-                    pdf.set_font("Helvetica", "", 12); pdf.multi_cell(0, 6, "- " + sanitize_for_pdf(line[2:]))
-                else:
-                    if line.strip()=="":
-                        pdf.ln(1)
-                    else:
-                        add_p(line)
+        add_h1("SME Cybersecurity Self-Assessment")
+        add_h2("Initial Summary & Action Plan"); pdf.ln(2)
 
-            pdf_bytes = pdf.output(dest="S").encode("latin-1", "ignore")
-            st.download_button("📄 Download summary + action plan (PDF)", data=pdf_bytes,
-                               file_name="cyber-assessment.pdf", mime="application/pdf")
-            return
-        except Exception:
-            pass
+        for line in md.splitlines():
+            if   line.startswith("# "):   add_h1(line[2:])
+            elif line.startswith("## "):  add_h2(line[3:])
+            elif line.startswith("### "): pdf.set_font("Helvetica","B",12); pdf.multi_cell(0,6,_sanitize_latin(line[4:]))
+            elif line.startswith("- "):   pdf.set_font("Helvetica","",12);  pdf.multi_cell(0,6,"- "+_sanitize_latin(line[2:]))
+            elif line.strip()=="":        pdf.ln(1)
+            else:                         add_p(line)
 
-        # Fallback: Markdown download (always works)
-        st.download_button("⬇️ Download summary + action plan (Markdown)", data=md.encode("utf-8"),
-                           file_name="cyber-assessment.md", mime="text/markdown")
+        out = pdf.output(dest="S")
+        if isinstance(out, (bytes, bytearray)):
+            pdf_bytes = bytes(out)
+        else:
+            # Older fpdf2 returns str -> encode to latin-1
+            pdf_bytes = out.encode("latin-1", "ignore")
 
-    export_button()
+        st.download_button("📄 Download summary + action plan (PDF)",
+                           data=pdf_bytes, file_name="cyber-assessment.pdf",
+                           mime="application/pdf")
+        return
+    except ImportError:
+        # fpdf2 not installed
+        pass
+    except Exception as e:
+        # If anything else breaks, show a tiny hint so we know what happened
+        st.caption(f"PDF engine fallback (reason: {type(e).__name__})")
 
-    cA, cB = st.columns(2)
-    with cA:
-        if st.button("⬅ Back to Detailed"):
-            go("Detailed"); st.rerun()
-    with cB:
-        if st.button("Start over"):
-            for k,v in defaults.items(): st.session_state[k]=v
-            go("Landing"); st.rerun()
+    # 2) Fallback: Markdown (always available)
+    st.download_button("⬇️ Download summary + action plan (Markdown)",
+                       data=md.encode("utf-8"),
+                       file_name="cyber-assessment.md",
+                       mime="text/markdown")
