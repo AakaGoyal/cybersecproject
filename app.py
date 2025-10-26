@@ -1,5 +1,5 @@
 import streamlit as st
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 from io import StringIO
 import csv
 import datetime as dt
@@ -108,13 +108,34 @@ def progress(step:int, total:int=3, label:str=""):
     pct = max(0, min(step, total)) / total
     st.progress(pct, text=label or f"Step {step} of {total}")
 
-def radio_none(label:str, options:List[str], *, key:str, horizontal=True, help:str|None=None):
-    """Radio with no preselected value (index=None).
-       Value is stored in session_state[key]. Returns value for convenience."""
+def radio_none(label:str, options:List[str], *, key:str, horizontal=True, help:str|None=None, placeholder: str = "— select —"):
+    """
+    Radio with no preselected value using a placeholder entry so Streamlit always
+    sees a valid selection. Stores the 'real' value in st.session_state[key].
+    Returns the real value ("" if unselected).
+    """
+    ui_key = f"{key}__ui"
+    ui_options = [placeholder] + list(options)
+
+    # Accept both "" and None as "blank"
     current = st.session_state.get(key, "")
-    idx = options.index(current) if current in options else None
-    val = st.radio(label, options, index=idx, key=key, horizontal=horizontal, help=help)
-    return val
+    idx = 0
+    if current in options:
+        idx = 1 + options.index(current)  # shift by placeholder
+
+    selected_ui = st.radio(
+        label,
+        ui_options,
+        index=idx,
+        key=ui_key,
+        horizontal=horizontal,
+        help=help,
+    )
+
+    # Map back to real value and persist
+    real_val = "" if selected_ui == placeholder else selected_ui
+    st.session_state[key] = real_val
+    return real_val
 
 TURNOVER_TO_SIZE = {**{k:"Micro" for k in TURNOVER_OPTIONS[:11]}, **{"€2M–€5M":"Small","€5M–€10M":"Small",">€10M":"Medium"}}
 EMP_RANGE_TO_SIZE = {"1–5":"Micro","6–10":"Micro","10–25":"Small","26–50":"Small","51–100":"Medium","More than 100":"Medium"}
@@ -338,7 +359,7 @@ if st.session_state.page == "Step 1":
             st.session_state.turnover_label = st.selectbox("💶 Approx. annual turnover *", TURNOVER_OPTIONS,
                 index=TURNOVER_OPTIONS.index(st.session_state.turnover_label))
 
-        # Radios with NO preselection (index=None) — value only in session_state
+        # Radios with NO preselection (safe placeholder)
         radio_none("🧭 Work mode *", WORK_MODE, key="work_mode", horizontal=True)
 
         st.markdown("#### 🧱 Operational context (recommended)")
