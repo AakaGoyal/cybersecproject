@@ -581,15 +581,16 @@ if st.session_state.page == "Detailed":
                      "🏛️ ")+s["id"] for s in ALL_SECTIONS])
     for tab, sec in zip(tabs, ALL_SECTIONS):
         with tab:
-            st.caption({"Access & Identity":"Control of user access and authentication.",
-                        "Device & Data":"How well devices and company data are secured.",
-                        "System & Software Updates":"Keeping systems patched and supported.",
-                        "Incident Preparedness":"Readiness to detect, respond, and recover.",
-                        "Vendor & Cloud":"Security of third-party tools, vendors, and SaaS.",
-                        "Governance":"Leadership, policy, roles, and record-keeping."}[sec["id"]])
-            for q in sec["questions"]]:
-                radio_none(q["t"], ["Yes","Partially","No","Not sure"], key=q["id"], horizontal=True,
-                           help=q["h"])
+            st.caption({
+                "Access & Identity":"Control of user access and authentication.",
+                "Device & Data":"How well devices and company data are secured.",
+                "System & Software Updates":"Keeping systems patched and supported.",
+                "Incident Preparedness":"Readiness to detect, respond, and recover.",
+                "Vendor & Cloud":"Security of third-party tools, vendors, and SaaS.",
+                "Governance":"Leadership, policy, roles, and record-keeping."
+            }[sec["id"]])
+            for q in sec["questions"]:
+                radio_none(q["t"], ["Yes","Partially","No","Not sure"], key=q["id"], horizontal=True, help=q["h"])
                 st.markdown(f"<div class='hint'>💡 {q['h']}</div>", unsafe_allow_html=True)
 
     cA, cB = st.columns(2)
