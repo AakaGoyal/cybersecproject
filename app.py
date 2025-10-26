@@ -1,13 +1,14 @@
 import streamlit as st
 
 # ─────────────────────────────────────────────────────────────
-# Page setup & compact styles
+# Page setup & styles (added safer top padding)
 # ─────────────────────────────────────────────────────────────
 st.set_page_config(page_title="SME Cybersecurity Self-Assessment", layout="wide")
 
 st.markdown("""
 <style>
-  .block-container {max-width: 1160px; padding-top: 1.0rem;}
+  .block-container {max-width: 1160px; padding-top: 2.25rem !important;}
+  .main > div:first-child {padding-top: 2.25rem !important;}
   h1,h2,h3,h4 {margin:.2rem 0 .5rem}
   .lead {color:#4b5563; margin:.25rem 0 .75rem}
   .hint {color:#6b7280; font-size:.95rem; margin:.15rem 0 .55rem}
@@ -17,8 +18,8 @@ st.markdown("""
   .amber{background:#fff5d6;color:#8a6d00;border-color:#ffe7ad}
   .red{background:#ffe5e5;color:#842029;border-color:#ffcccc}
   .card {border:1px solid #e6e8ec;border-radius:12px;padding:12px;background:#fff}
-  .sticky {position: sticky; top: 10px;}
-  div[data-baseweb="radio"] > div {gap:.5rem;} /* compact radios */
+  .sticky {position: sticky; top: 12px;}
+  div[data-baseweb="radio"] > div {gap:.5rem;}
   .btnrow {margin-top:.4rem}
   .tight {margin-top:.25rem}
   .kicker {font-size:.95rem;color:#6b7280;margin-bottom:.35rem}
@@ -47,7 +48,6 @@ TURNOVER_OPTIONS = [
     "€1M–€2M","€2M–€5M","€5M–€10M",">€10M"
 ]
 
-# Updated labels: full names with short forms in brackets
 REGION_OPTIONS = ["EU / EEA", "UK", "United States", "Other / Multi-region"]
 CRITICAL_SYSTEMS = [
     "Enterprise Resource Planning (ERP)",
@@ -76,17 +76,17 @@ DATA_TYPE_HELP = {
 
 SECTION_INTRO = {
     "Access & Identity":
-        "Who can access what, and how safely. Covers passwords, Multi-Factor Authentication (MFA), admin rights, and removing ex-staff.",
+        "🔑 **What this covers:** who can access what, and how safely (passwords, MFA, admin rights, removing ex-staff).  \n🧭 **Why it matters:** most breaches start with weak or reused passwords.",
     "Device & Data":
-        "Protecting laptops/phones and company files. Covers disk encryption, antivirus/EDR, backups and restore checks.",
+        "💻 **What this covers:** laptops/phones protection, disk encryption, antivirus/EDR, backups and restores.  \n🧭 **Why it matters:** lost or stolen devices shouldn’t expose your data.",
     "System & Software Updates":
-        "Staying patched and supported. Covers OS updates, application updates, and removing unsupported systems.",
+        "🧩 **What this covers:** OS & app updates, and avoiding unsupported systems.  \n🧭 **Why it matters:** patches close known holes attackers scan for.",
     "Incident Preparedness":
-        "Being ready for the bad day. Covers how to report, a simple response plan, key contacts, and basic testing.",
+        "🚨 **What this covers:** reporting, a simple response plan, key contacts, and quick practice.  \n🧭 **Why it matters:** clear steps limit damage and downtime.",
     "Vendor & Cloud":
-        "Security for SaaS and suppliers. Covers MFA on cloud tools, breach notification, and tracking who has access.",
+        "☁️ **What this covers:** MFA on cloud tools, contracts, who has access, and breach notification.  \n🧭 **Why it matters:** third-parties are part of your security.",
     "Awareness & Training":
-        "Helping people spot and avoid scams. Covers awareness sessions, phishing know-how, onboarding, reminders, and leadership support.",
+        "🧠 **What this covers:** basic training, phishing know-how, onboarding, reminders, leadership support.  \n🧭 **Why it matters:** people stop the majority of attacks.",
 }
 
 # ─────────────────────────────────────────────────────────────
@@ -94,7 +94,6 @@ SECTION_INTRO = {
 # ─────────────────────────────────────────────────────────────
 defaults = dict(
     page="Landing",
-    # Step 1 — basics
     person_name="", company_name="",
     sector_label=INDUSTRY_OPTIONS[0], sector_other="",
     years_in_business=YEARS_OPTIONS[0],
@@ -102,7 +101,7 @@ defaults = dict(
     turnover_label=TURNOVER_OPTIONS[0],
     work_mode=WORK_MODE[0],
     business_region=REGION_OPTIONS[0],
-    # Step 2 — (moved) operating context
+    # Operating context (in Step 2)
     critical_systems=[], critical_systems_other="",
     primary_work_env=WORK_ENVIRONMENTS[1],
     remote_ratio=REMOTE_RATIO[1],
@@ -164,12 +163,13 @@ def compute_tags():
     rr=st.session_state.remote_ratio
     tags.add("work:remote" if rr=="Fully remote" else "work:hybrid" if rr=="Hybrid" else "work:onsite")
     for s in st.session_state.critical_systems or []:
-        if "(erp)" in s.lower(): tags.add("system:erp")
-        elif "(pos)" in s.lower(): tags.add("system:pos")
-        elif "(crm)" in s.lower(): tags.add("system:crm")
-        elif "(ehr)" in s.lower(): tags.add("system:ehr")
-        elif "(cms)" in s.lower(): tags.add("system:cms")
-        elif "other" in s.lower(): tags.add("system:other")
+        sl=s.lower()
+        if "(erp)" in sl: tags.add("system:erp")
+        elif "(pos)" in sl: tags.add("system:pos")
+        elif "(crm)" in sl: tags.add("system:crm")
+        elif "(ehr)" in sl: tags.add("system:ehr")
+        elif "(cms)" in sl: tags.add("system:cms")
+        elif "other" in sl: tags.add("system:other")
     for d in st.session_state.data_types or []:
         dl=d.lower()
         if "customer" in dl: tags.add("data:pii")
@@ -183,7 +183,6 @@ def compute_tags():
     tags |= certification_tags()
     return tags
 
-# Baseline RAG
 def area_rag():
     inv=(st.session_state.bp_inventory or "").lower()
     sys=("🟢 Good","green") if inv=="yes" else ("🟡 Partial","amber") if inv=="partially" else ("🔴 At risk","red") if inv in {"no","not sure"} else ("⚪ Unknown","")
@@ -209,7 +208,9 @@ def overall_badge():
 
 def go(page): st.session_state.page=page; st.rerun()
 
+# ─────────────────────────────────────────────────────────────
 # Sections (Tier-2)
+# ─────────────────────────────────────────────────────────────
 def section(title_id, qlist):
     return {"id":title_id, "title":title_id, "questions":qlist}
 
@@ -264,13 +265,20 @@ def render_section(sec):
     st.markdown(f"<div class='hint'>{SECTION_INTRO.get(sec['id'],'')}</div>", unsafe_allow_html=True)
     for q in sec["questions"]:
         st.radio(q["t"], ["Yes","Partially","No","Not sure"], key=q["id"], horizontal=True)
-        st.markdown(f"<div class='hint'>{q['h']}</div>", unsafe_allow_html=True)  # put help BELOW the question
+        st.markdown(f"<div class='hint'>💡 {q['h']}</div>", unsafe_allow_html=True)
     st.markdown("")
 
 def section_score(sec):
     vals=[st.session_state.get(q["id"],"") for q in sec["questions"]]
     risk={"Yes":0,"Partially":1,"Not sure":1,"No":2}
     return round(sum(risk.get(v,1) for v in vals)/len(vals),2) if vals else 0.0
+
+def section_light(sec):
+    """Return (emoji,label,class) traffic light from section score."""
+    sc = section_score(sec)
+    if sc < 0.5: return ("🟢","Low","green")
+    if sc < 1.2: return ("🟡","Medium","amber")
+    return ("🔴","High","red")
 
 def pick_active_sections(tags:set):
     active=set(BASELINE_IDS)
@@ -294,29 +302,29 @@ def applicable_compliance(tags:set):
 # LANDING
 # ─────────────────────────────────────────────────────────────
 if st.session_state.page == "Landing":
-    st.markdown("# SME Cybersecurity Self-Assessment")
+    st.markdown("# 🛡️ SME Cybersecurity Self-Assessment")
     st.markdown("<div class='lead'>Assess · Understand · Act — in under 15 minutes.</div>", unsafe_allow_html=True)
     left, right = st.columns(2)
     with left:
-        st.write("• Plain-language questions")
-        st.write("• Traceable to NIST/ISO")
+        st.write("• 🗣️ Plain-language questions")
+        st.write("• 📚 Traceable to NIST/ISO")
     with right:
-        st.write("• Lightweight, 10–15 minutes")
-        st.write("• Safe demos of common scams")
+        st.write("• ⏱️ 10–15 minutes")
+        st.write("• 🧪 Safe demos of common scams")
     if st.button("Start ➜", type="primary"): go("Step 1")
 
 # ─────────────────────────────────────────────────────────────
-# STEP 1 — Business basics (clean, minimal)
+# STEP 1 — Business basics
 # ─────────────────────────────────────────────────────────────
 if st.session_state.page == "Step 1":
     st.markdown("##### Step 1 of 4")
-    st.markdown("## Tell us about the business")
+    st.markdown("## 🧭 Tell us about the business")
     st.caption("Just the basics — the detailed bits come later.")
 
     snap, form = st.columns([1, 2], gap="large")
     with snap:
         st.markdown('<div class="sticky">', unsafe_allow_html=True)
-        st.markdown("#### Snapshot")
+        st.markdown("#### 📸 Snapshot")
         st.markdown(
             f"<div class='card tight'><b>Business:</b> {st.session_state.company_name or '—'}<br>"
             f"<b>Region:</b> {st.session_state.business_region}<br>"
@@ -330,11 +338,11 @@ if st.session_state.page == "Step 1":
         st.markdown("</div>", unsafe_allow_html=True)
 
     with form:
-        st.markdown("#### About you")
-        st.session_state.person_name = st.text_input("👤 Your name *", value=st.session_state.person_name)
+        st.markdown("#### 👤 About you")
+        st.session_state.person_name = st.text_input("Your name *", value=st.session_state.person_name)
 
-        st.markdown("#### About the business")
-        st.session_state.company_name = st.text_input("🏢 Business name *", value=st.session_state.company_name)
+        st.markdown("#### 🏢 About the business")
+        st.session_state.company_name = st.text_input("Business name *", value=st.session_state.company_name)
         c1, c2 = st.columns(2)
         with c1:
             st.session_state.business_region = st.selectbox("🌍 Business location / region *", REGION_OPTIONS,
@@ -370,17 +378,17 @@ if st.session_state.page == "Step 1":
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────
-# STEP 2 — Quick checks + Operating context (moved here, optional)
+# STEP 2 — Quick checks + Operating context (optional)
 # ─────────────────────────────────────────────────────────────
 if st.session_state.page == "Step 2":
     st.markdown("##### Step 2 of 4")
-    st.markdown("## Your current practices & setup")
+    st.markdown("## 🧪 Your current practices & setup")
     st.caption("Answer the quick checks. The operating context tab is optional and helps tailor advice.")
 
     snap, body, prev = st.columns([1, 1.65, 1], gap="large")
     with snap:
         st.markdown('<div class="sticky">', unsafe_allow_html=True)
-        st.markdown("#### Snapshot")
+        st.markdown("#### 📸 Snapshot")
         st.markdown(
             f"<div class='card tight'><b>Business:</b> {st.session_state.company_name}<br>"
             f"<b>Region:</b> {st.session_state.business_region}<br>"
@@ -390,8 +398,10 @@ if st.session_state.page == "Step 2":
             f"<b>Work mode:</b> {st.session_state.work_mode}</div>", unsafe_allow_html=True
         )
         sys,ppl,net = area_rag()
-        st.markdown("#### At-a-glance")
-        st.markdown(f"<span class='chip {sys[1]}'>🖥️ Systems · {sys[0]}</span><span class='chip {ppl[1]}'>👥 People · {ppl[0]}</span><span class='chip {net[1]}'>🌐 Exposure · {net[0]}</span>", unsafe_allow_html=True)
+        st.markdown("#### 🔎 At-a-glance")
+        st.markdown(f"<span class='chip {sys[1]}'>🖥️ Systems · {sys[0]}</span>"
+                    f"<span class='chip {ppl[1]}'>👥 People · {ppl[0]}</span>"
+                    f"<span class='chip {net[1]}'>🌐 Exposure · {net[0]}</span>", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
     with body:
@@ -399,7 +409,6 @@ if st.session_state.page == "Step 2":
 
         with tab1:
             st.markdown("Use plain answers — we’ll guide you next.")
-            # Q1–Q4
             st.radio("**Q1. Who looks after your IT day-to-day?**", ["Self-managed","Outsourced IT","Shared responsibility","Not sure"], key="bp_it_manager", horizontal=True)
             st.markdown("<div class='hint'>Includes laptops/phones, Wi-Fi, email, website, cloud apps, file storage/backup.</div>", unsafe_allow_html=True)
 
@@ -414,7 +423,6 @@ if st.session_state.page == "Step 2":
             st.markdown("<div class='hint'>Payment details, personal records, contracts.</div>", unsafe_allow_html=True)
 
         with tab2:
-            # Q5–Q9
             st.radio("**Q5. Do you have a public website?**", ["Yes","No"], key="df_website", horizontal=True)
             st.markdown("<div class='hint'>Helps assess potential online entry points.</div>", unsafe_allow_html=True)
 
@@ -440,7 +448,6 @@ if st.session_state.page == "Step 2":
                 st.radio("🏠 Remote work ratio", REMOTE_RATIO, key="remote_ratio", horizontal=True, index=REMOTE_RATIO.index(st.session_state.remote_ratio))
             with cB:
                 st.multiselect("🔎 Types of personal data handled", DATA_TYPES, key="data_types", default=st.session_state.data_types)
-                # contextual help for each data type
                 if st.session_state.data_types:
                     st.markdown("<div class='hint'><b>What these mean:</b><br>" + "<br>".join([f"• <b>{d}</b>: {DATA_TYPE_HELP[d]}" for d in st.session_state.data_types]) + "</div>", unsafe_allow_html=True)
                 else:
@@ -460,17 +467,17 @@ if st.session_state.page == "Step 2":
         st.button("Continue ➜", type="primary", disabled=len(missing)>0, on_click=lambda: go("Step 3"))
 
 # ─────────────────────────────────────────────────────────────
-# STEP 3 — Summary (tighter, more cohesive)
+# STEP 3 — Summary
 # ─────────────────────────────────────────────────────────────
 if st.session_state.page == "Step 3":
-    st.markdown("## Initial Assessment Summary")
+    st.markdown("## 📊 Initial Assessment Summary")
     over_txt, over_class, over_msg = overall_badge()
     st.markdown(f"<span class='pill {over_class}'>Overall digital dependency: <b>{over_txt}</b></span>", unsafe_allow_html=True)
     st.caption(over_msg)
 
     snap, glance = st.columns([1.05, 1.95], gap="large")
     with snap:
-        st.markdown("### Snapshot")
+        st.markdown("### 📸 Snapshot")
         st.markdown(
             f"<div class='card tight'><b>Business:</b> {st.session_state.company_name}<br>"
             f"<b>Region:</b> {st.session_state.business_region}<br>"
@@ -483,14 +490,14 @@ if st.session_state.page == "Step 3":
         )
 
     with glance:
-        st.markdown("### At-a-glance")
+        st.markdown("### 🔎 At-a-glance")
         sys,ppl,net = area_rag()
         st.markdown(f"<span class='chip {sys[1]}'>🖥️ Systems · {sys[0]}</span>"
                     f"<span class='chip {ppl[1]}'>👥 People · {ppl[0]}</span>"
                     f"<span class='chip {net[1]}'>🌐 Exposure · {net[0]}</span>", unsafe_allow_html=True)
         hints=[]
         if st.session_state.bp_inventory not in ("Yes","Partially"): hints.append("📝 Add/finish your device list.")
-        if st.session_state.df_website=="Yes" and st.session_state.df_https!="Yes": hints.append("🔒 Enable HTTPS for your website.")
+        if st.session_state.df_website=='Yes' and st.session_state.df_https!='Yes': hints.append("🔒 Enable HTTPS for your website.")
         if st.session_state.bp_byod in ("Yes","Sometimes"): hints.append("📱 Set simple BYOD + MFA rules.")
         if hints: st.caption(" · ".join(hints))
 
@@ -498,25 +505,25 @@ if st.session_state.page == "Step 3":
 
     colS, colR = st.columns(2, gap="large")
     with colS:
-        st.markdown("### Strengths")
+        st.markdown("### ✅ Strengths")
         strengths=[]
         if st.session_state.df_https=="Yes": strengths.append("Website uses HTTPS (encrypted traffic).")
         if st.session_state.bp_inventory in ("Yes","Partially"): strengths.append("You keep a device list (even partial helps).")
         if not strengths: strengths.append("Solid starting point across core practices.")
-        st.markdown("<div class='card'><ul style='margin:.25rem 1rem'>"+ "".join([f"<li>{x}</li>" for x in strengths]) + "</ul></div>", unsafe_allow_html=True)
+        st.markdown("<div class='card'><ul style='margin:.25rem 1rem'>"+ "".join([f"<li>💪 {x}</li>" for x in strengths]) + "</ul></div>", unsafe_allow_html=True)
     with colR:
-        st.markdown("### Areas to improve")
+        st.markdown("### ⚠️ Areas to improve")
         risks=[]
         if st.session_state.df_email in ("No","Partially"): risks.append("Move to business email and enforce MFA.")
         if st.session_state.bp_byod in ("Yes","Sometimes"): risks.append("BYOD needs simple device rules and MFA.")
         if st.session_state.bp_sensitive=="Yes": risks.append("Back up key data and protect access with MFA.")
         if st.session_state.df_website=="Yes" and st.session_state.df_https!="Yes": risks.append("Turn on HTTPS and redirect HTTP→HTTPS.")
         if not risks: risks.append("Test incident response and tighten MFA hygiene.")
-        st.markdown("<div class='card'><ul style='margin:.25rem 1rem'>"+ "".join([f"<li>{x}</li>" for x in risks]) + "</ul></div>", unsafe_allow_html=True)
+        st.markdown("<div class='card'><ul style='margin:.25rem 1rem'>"+ "".join([f"<li>🔧 {x}</li>" for x in risks]) + "</ul></div>", unsafe_allow_html=True)
 
-    st.markdown("### Likely compliance & standards to consider")
+    st.markdown("### 📚 Likely compliance & standards to consider")
     for name, level, note in applicable_compliance(compute_tags()):
-        st.markdown(f"<div class='card' style='margin-bottom:.5rem'><b>{name}</b> <span class='tag'>{level}</span><div class='hint'>{note}</div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='card' style='margin-bottom:.5rem'><b>{name}</b> <span class='tag'>{level}</span><div class='hint'>ℹ️ {note}</div></div>", unsafe_allow_html=True)
 
     c1, c2, c3 = st.columns([1,1,2])
     with c1:
@@ -531,11 +538,11 @@ if st.session_state.page == "Step 3":
             go("Detailed")
 
 # ─────────────────────────────────────────────────────────────
-# STEP 4 — Detailed (with inline help text & section intros)
+# STEP 4 — Detailed
 # ─────────────────────────────────────────────────────────────
 if st.session_state.page == "Detailed":
     st.markdown("##### Step 4 of 4")
-    st.markdown("## Detailed Assessment")
+    st.markdown("## 🧩 Detailed Assessment")
 
     active_ids=set(st.session_state.get("detailed_sections", []))
     sections=[s for s in ALL_SECTIONS if s["id"] in active_ids] or [SECTION_3,SECTION_4,SECTION_5,SECTION_8]
@@ -547,60 +554,62 @@ if st.session_state.page == "Detailed":
     with c1:
         if st.button("⬅ Back to Summary"): go("Step 3")
     with c2:
-        if st.button("Finish & see recommendations ➜", type="primary"):
+        if st.button("Finish & see action plan ➜", type="primary"):
             st.session_state["detailed_scores"]={s["id"]: section_score(s) for s in sections}
             go("Report")
 
 # ─────────────────────────────────────────────────────────────
-# REPORT — Action Plan (value-focused)
+# REPORT — Action Plan (traffic lights, no numbers)
 # ─────────────────────────────────────────────────────────────
 if st.session_state.page == "Report":
-    st.markdown("## Action Plan & Section Scores")
+    st.markdown("## 🗺️ Action Plan & Section Status")
 
-    scores=st.session_state.get("detailed_scores", {})
-    if scores:
-        cols=st.columns(len(scores))
-        for (sid,sc),col in zip(scores.items(), cols):
-            level="green" if sc<0.5 else "amber" if sc<1.2 else "red"
-            label="Low" if level=="green" else "Medium" if level=="amber" else "High"
+    # Section traffic lights (no numeric scores shown)
+    detailed_scores = st.session_state.get("detailed_scores", {})
+    if detailed_scores:
+        cols = st.columns(len(detailed_scores))
+        lookup = {s["id"]: s for s in ALL_SECTIONS}
+        for (sid, _), col in zip(detailed_scores.items(), cols):
+            emoji, label, klass = section_light(lookup[sid])
             with col:
-                st.markdown(f"<div class='card'><b>{sid}</b><div class='hint'>Risk: <b>{label}</b> (score {sc})</div></div>", unsafe_allow_html=True)
+                st.markdown(
+                    f"<div class='card'><b>{sid}</b>"
+                    f"<div class='hint'>Status: <span class='pill {klass}'>{emoji} {label}</span></div></div>",
+                    unsafe_allow_html=True
+                )
     else:
-        st.caption("No detailed scores yet. Complete the detailed assessment to see section scores.")
+        st.caption("No detailed sections answered yet. Complete the detailed assessment to see section status.")
 
-    # Build a meaningful plan (impact/effort buckets)
+    # Build plan
     tags = compute_tags()
     quick, foundations, nextlvl = [], [], []
 
-    # Quick wins
     if st.session_state.df_website=="Yes" and st.session_state.df_https!="Yes":
-        quick.append("Enable HTTPS and force redirect (HTTP→HTTPS). <span class='tag'>High impact</span> <span class='tag'>Low effort</span>")
+        quick.append("🔒 Enable HTTPS and force redirect (HTTP→HTTPS). <span class='tag'>High impact</span> <span class='tag'>Low effort</span>")
     if st.session_state.df_email in ("No","Partially"):
-        quick.append("Move to business email (M365/Google) and **enforce MFA** for all users. <span class='tag'>High</span> <span class='tag'>Low</span>")
+        quick.append("📧 Move to business email (M365/Google) and **enforce MFA** for all users. <span class='tag'>High</span> <span class='tag'>Low</span>")
     if st.session_state.bp_inventory not in ("Yes","Partially"):
-        quick.append("Start a simple **device inventory** (sheet or MDM export). <span class='tag'>Med</span> <span class='tag'>Low</span>")
+        quick.append("📋 Start a simple **device inventory** (sheet or MDM export). <span class='tag'>Med</span> <span class='tag'>Low</span>")
 
-    # Foundations
     if st.session_state.bp_byod in ("Yes","Sometimes"):
-        foundations.append("Publish a **BYOD rule of 5**: screen lock, OS updates, disk encryption, MFA for email, approved apps.")
-    foundations.append("Turn on **automatic OS & app updates**; remove unsupported systems.")
-    foundations.append("Automate **backups** and **test a restore** quarterly.")
+        foundations.append("📱 Publish a **BYOD rule of 5**: screen lock, OS updates, disk encryption, MFA for email, approved apps.")
+    foundations.append("🧩 Turn on **automatic OS & app updates**; remove unsupported systems.")
+    foundations.append("🗄️ Automate **backups** and **test a restore** quarterly.")
 
-    # Next level / governance
     if any(t in tags for t in ["infra:cloud","system:pos","geo:crossborder"]):
-        nextlvl.append("Review key **vendor contracts**: breach notification, data location/transfer, and admin MFA.")
+        nextlvl.append("🤝 Review key **vendor contracts**: breach notification, data location/transfer, and admin MFA.")
     if "payments:card" in tags or "system:pos" in tags:
-        nextlvl.append("Confirm **PCI DSS** responsibilities with your PoS/PSP (often most of the burden is on the provider).")
+        nextlvl.append("💳 Confirm **PCI DSS** responsibilities with your PoS/PSP (often most of the burden is on the provider).")
     if any(t in tags for t in ["geo:eu","geo:uk"]):
-        nextlvl.append("Document **GDPR basics**: Records of Processing, Data Processing Agreements, and a contact for data requests.")
+        nextlvl.append("📘 Document **GDPR basics**: Records of Processing, DPAs, and a contact for data requests.")
 
-    st.markdown("### Quick wins (do these first)")
+    st.markdown("### ⚡ Quick wins (do these first)")
     st.markdown("<div class='card'><ul style='margin:.25rem 1rem'>"+ "".join([f"<li>{x}</li>" for x in quick or ['No urgent quick wins detected.']]) +"</ul></div>", unsafe_allow_html=True)
 
-    st.markdown("### Foundations to build this quarter")
+    st.markdown("### 🧱 Foundations to build this quarter")
     st.markdown("<div class='card'><ul style='margin:.25rem 1rem'>"+ "".join([f"<li>{x}</li>" for x in foundations]) +"</ul></div>", unsafe_allow_html=True)
 
-    st.markdown("### Next-level / compliance alignment")
+    st.markdown("### 🚀 Next-level / compliance alignment")
     st.markdown("<div class='card'><ul style='margin:.25rem 1rem'>"+ "".join([f"<li>{x}</li>" for x in nextlvl]) +"</ul></div>", unsafe_allow_html=True)
 
     c1,c2 = st.columns([1,1])
