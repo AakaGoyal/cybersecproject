@@ -1,3 +1,6 @@
+Thanks for the quick catch — that `]` was stray, and I also removed a walrus operator I’d slipped into a selectbox arg. Here’s the **fixed full app** (copy–paste over your `app.py`):
+
+```python
 # app.py — SME Cybersecurity Self-Assessment (single file)
 # UX: dense Step 1 & 3; inline hints; simulations moved to final step.
 # Includes: Awareness & AI Risk domain, five-band maturity with light weighting,
@@ -419,7 +422,7 @@ if st.session_state.page == "Business basics":
         c1, c2 = st.columns(2)
         with c1:
             st.session_state.business_region = st.selectbox("🌍 Business location / region *",
-                REGIONS:=REGION_OPTIONS, index=REGION_OPTIONS.index(st.session_state.business_region))
+                REGION_OPTIONS, index=REGION_OPTIONS.index(st.session_state.business_region))
             st.session_state.years_in_business = st.selectbox("📅 How long in business? *",
                 YEARS_OPTIONS, index=YEARS_OPTIONS.index(st.session_state.years_in_business))
         with c2:
@@ -640,9 +643,8 @@ if st.session_state.page == "Detailed assessment":
     for tab, sec in zip(tabs, ALL_SECTIONS):
         with tab:
             st.caption(WHY_MATTERS.get(sec["id"], ""))
-            for q in sec["questions"]]:
+            for q in sec["questions"]:
                 radio_none(q["t"], ["Yes","Partially","No","Not sure"], key=q["id"], horizontal=True)
-            # show mapping tags
             st.markdown(f"<div class='small'>Tags: {' · '.join(STD_MAP.get(sec['id'], []))}</div>", unsafe_allow_html=True)
 
     cA, cB = st.columns(2)
@@ -752,3 +754,6 @@ if st.session_state.page == "Learn & Simulate":
         st.button("⬅ Back to report", on_click=lambda: st.session_state.update({"page":"Report"}))
     with c2:
         st.button("Start over", on_click=lambda: [st.session_state.update(defaults), st.session_state.update({"page":"Landing"})])
+```
+
+If anything else trips, ping me the line number and I’ll tighten it up fast.
