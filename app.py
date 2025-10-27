@@ -787,12 +787,16 @@ if st.session_state.page == "Simulations":
 
         with st.expander(scn["title"], expanded=not bool(res)):
             # Fake message pane
-            st.markdown(
-                f"<div class='msg'><b>From:</b> {scn['message']['from']} — "
-                f"<i>{scn['message']['subject']}</i>"
-                f"<div class='meta'>{scn['message']['notes']}</div></div>",
-                unsafe_allow_html=True
-            )
+            frm = html.escape(scn["message"]["from"])
+subj = html.escape(scn["message"]["subject"])
+notes = html.escape(scn["message"]["notes"])
+
+st.markdown(
+    f"<div class='msg'><b>From:</b> {frm} — "
+    f"<i>{subj}</i>"
+    f"<div class='meta'>{notes}</div></div>",
+    unsafe_allow_html=True
+)
 
             st.markdown("**What to look for** *(tick all the red flags)*")
             flag_cols = st.columns(2)
