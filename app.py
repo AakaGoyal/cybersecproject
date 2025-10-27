@@ -671,35 +671,227 @@ if st.session_state.page == "Report":
             st.button("Start over", on_click=lambda: [st.session_state.update(defaults),
                                                       st.session_state.update({"page":"Step 1"})])
 # ─────────────────────────────────────────────────────────────
-# UI — Simulations (read-only, friendlier content)
+# UI — Simulations (interactive, read-only & privacy-safe)
 # ─────────────────────────────────────────────────────────────
 if st.session_state.page == "Simulations":
+
+    # Keep local state for quiz results (no storage, no network)
+    st.session_state.setdefault("sim_results", {})
+
+    # Tiny styles for message cards & badges
+    st.markdown("""
+    <style>
+      .msg{border:1px solid #e6e8ec;background:#fff;border-radius:14px;padding:14px}
+      .meta{color:#64748b;font-size:.92rem;margin:.25rem 0 .35rem}
+      .badge{display:inline-flex;align-items:center;gap:.35rem;border:1px solid #e6e8ec;border-radius:999px;padding:.08rem .5rem}
+      .good{background:#e8f7ee;color:#0f5132;border-color:#cceedd}
+      .warn{background:#fff5d6;color:#8a6d00;border-color:#ffe7ad}
+      .card{border:1px solid #e6e8ec;background:#fff;border-radius:14px;padding:14px}
+      .small{color:#475569;font-size:.95rem}
+    </style>
+    """, unsafe_allow_html=True)
+
     st.markdown("## 🧪 Guided simulations (safe, read-only)")
     st.caption("These are examples only. No messages are sent and nothing is stored.")
 
-    with st.expander("🎣 Invoice phish preview", expanded=True):
-        st.write("**From:** “Accounts” <accounts@trusted-lookalike.com> — “Please review the attached invoice ASAP.”")
-        st.write("**What to look for**")
-        st.markdown("- Display-name spoofing\n- Urgent tone\n- Link hover doesn’t match the domain\n- Attachment from unknown sender")
-        st.write("**What to do**")
-        st.markdown("- Use your ‘Report suspicious’ route\n- Verify invoices via a known back-channel (phone/portal), not by replying")
+    # -------------------------
+    # Scenario definitions
+    # -------------------------
+    SCENARIOS = [
+        {
+            "id": "invoice_phish",
+            "title": "📧 Invoice phish preview",
+            "message": {
+                "from": "“Accounts” <accounts@trusted-lookalike.com>",
+                "subject": "Please review the attached invoice ASAP.",
+                "notes": "Display-name spoofing and urgency."
+            },
+            # Checkboxes: (label, is_red_flag)
+            "flags": [
+                ("Display-name spoofing", True),
+                ("Urgent tone", True),
+                ("Link hover doesn’t match the domain", True),
+                ("Attachment from unknown sender", True),
+                ("Professional-looking logo", False),   # decoy
+            ],
+            # Best action (single choice radio)
+            "actions": {
+                "choices": [
+                    "Reply to verify",
+                    "Click the link",
+                    "Report via your ‘Report suspicious’ route ✅",
+                    "Pay the invoice to be safe"
+                ],
+                "correct_index": 2
+            },
+            "takeaway": "Always verify invoices using a known back-channel (phone/portal). Don’t reply into the thread."
+        },
+        {
+            "id": "voice_clone",
+            "title": "🗣️ CEO voice-clone request",
+            "message": {
+                "from": "Voicemail: “Hi, it’s me — can you urgently change the payment details?”",
+                "subject": "Payment change approval",
+                "notes": "Authority + urgency; unfamiliar contact route."
+            },
+            "flags": [
+                ("Urgent + authority pressure", True),
+                ("Unfamiliar contact method", True),
+                ("Out-of-hours request", True),
+                ("Caller ID shows a known number", False),  # decoy
+            ],
+            "actions": {
+                "choices": [
+                    "Approve the change — it sounded right",
+                    "Call back on a number from the message",
+                    "Verify via a known number or channel ✅",
+                    "Email the supplier the new details"
+                ],
+                "correct_index": 2
+            },
+            "takeaway": "Have a back-channel (known number/code) for payment or HR changes — never act only on the voice you hear."
+        },
+        {
+            "id": "security_alert",
+            "title": "🔐 ‘Security alert’ login lure",
+            "message": {
+                "from": "Security <alerts@account-notice.com>",
+                "subject": "Your account will be locked — reset password now",
+                "notes": "Generic greeting, domain mismatch, click-now pressure."
+            },
+            "flags": [
+                ("Generic greeting", True),
+                ("Domain mismatch", True),
+                ("Push to click immediately", True),
+                ("The email uses HTTPS links so it’s safe", False),  # decoy
+            ],
+            "actions": {
+                "choices": [
+                    "Click the link and reset quickly",
+                    "Go directly to the site/app or use IT’s known route ✅",
+                    "Forward to everyone as a warning",
+                    "Ignore and hope it goes away"
+                ],
+                "correct_index": 1
+            },
+            "takeaway": "Never follow login links in unsolicited alerts. Open the site/app yourself or use your IT portal."
+        },
+    ]
 
-    with st.expander("🗣️ CEO voice-clone request"):
-        st.write("**Scenario:** an urgent voice note asking for a payment change.")
-        st.write("**What to look for**")
-        st.markdown("- Urgency + authority\n- Unfamiliar contact method\n- Out-of-hours request")
-        st.write("**What to do**")
-        st.markdown("- Call back using a **known** number or channel\n- Use a 2-person approval for payment changes")
+    # -------------------------
+    # Helper renderer
+    # -------------------------
+    def render_quiz(scn):
+        sid = scn["id"]
+        res = st.session_state["sim_results"].get(sid, {})
 
-    with st.expander("🔐 ‘Security alert’ login lure"):
-        st.write("**Scenario:** “Your account will be locked. Reset your password now.”")
-        st.write("**What to look for**")
-        st.markdown("- Generic greeting\n- Domain mismatch\n- Push to click immediately")
-        st.write("**What to do**")
-        st.markdown("- Don’t click links in the email\n- Go directly to the site or use your IT’s known route")
+        with st.expander(scn["title"], expanded=not bool(res)):
+            # Fake message pane
+            st.markdown(
+                f"<div class='msg'><b>From:</b> {scn['message']['from']} — "
+                f"<i>{scn['message']['subject']}</i>"
+                f"<div class='meta'>{scn['message']['notes']}</div></div>",
+                unsafe_allow_html=True
+            )
 
+            st.markdown("**What to look for** *(tick all the red flags)*")
+            flag_cols = st.columns(2)
+            flag_states = []
+            for i, (label, _) in enumerate(scn["flags"]):
+                with flag_cols[i % 2]:
+                    flag_states.append(
+                        st.checkbox(label, key=f"{sid}_flag_{i}", value=res.get("flags", {}).get(i, False))
+                    )
+
+            st.markdown("**What would you do?**")
+            action_choice = st.radio(
+                "Choose the best next step:",
+                scn["actions"]["choices"],
+                key=f"{sid}_action",
+                index=res.get("action_index", 0),
+                label_visibility="collapsed"
+            )
+
+            conf = st.slider("How confident were you?", 0, 100, value=res.get("confidence", 60), key=f"{sid}_conf")
+
+            # Evaluate button
+            if st.button("Check my answers", key=f"{sid}_check"):
+                correct_flags = [is_flag for (_, is_flag) in scn["flags"]]
+                chosen_flags = flag_states
+                total_flags = sum(correct_flags)
+                got_flags = sum(1 for a, b in zip(correct_flags, chosen_flags) if a and b)
+
+                action_index = scn["actions"]["choices"].index(action_choice)
+                action_correct = (action_index == scn["actions"]["correct_index"])
+
+                pct = round(100 * ((got_flags / max(1, total_flags)) * 0.7 + (1.0 if action_correct else 0.0) * 0.3), 0)
+
+                st.session_state["sim_results"][sid] = {
+                    "flags": {i: v for i, v in enumerate(flag_states)},
+                    "got_flags": int(got_flags),
+                    "total_flags": int(total_flags),
+                    "action_index": int(action_index),
+                    "action_correct": bool(action_correct),
+                    "confidence": int(conf),
+                    "pct": int(pct),
+                    "completed": True
+                }
+
+                # Feedback
+                st.success(f"Recognition: **{got_flags}/{total_flags}** flags • Action: "
+                           f"{'✅ Correct' if action_correct else '⚠️ Better option available'} • Score: **{pct}%**")
+
+                tip = (
+                    "Nice start — notice how urgency and unknown senders pair up."
+                    if pct < 50 else
+                    "Good eye — keep building the verify-before-you-act habit."
+                    if pct < 80 else
+                    "Excellent! Share the reporting route with your team."
+                )
+                st.markdown(f"<div class='card small'>{tip}</div>", unsafe_allow_html=True)
+
+            # Lesson takeaway
+            st.markdown(f"**🧠 Lesson:** {scn['takeaway']}")
+
+    # -------------------------
+    # Progress header
+    # -------------------------
+    completed = sum(1 for s in SCENARIOS if st.session_state["sim_results"].get(s["id"], {}).get("completed"))
+    avg_pct = 0
+    if completed:
+        avg_pct = round(sum(st.session_state["sim_results"][s["id"]]["pct"] for s in SCENARIOS
+                            if st.session_state["sim_results"].get(s["id"], {}).get("completed")) / completed, 0)
+    avg_conf = 0
+    if completed:
+        avg_conf = round(sum(st.session_state["sim_results"][s["id"]]["confidence"] for s in SCENARIOS
+                             if st.session_state["sim_results"].get(s["id"], {}).get("completed")) / completed, 0)
+
+    st.markdown(
+        f"<div class='card'><b>Progress:</b> {completed}/{len(SCENARIOS)} completed · "
+        f"Avg recognition: {avg_pct}% · Avg confidence: {avg_conf}%</div>", unsafe_allow_html=True
+    )
+
+    # -------------------------
+    # Render scenarios
+    # -------------------------
+    for scn in SCENARIOS:
+        render_quiz(scn)
+
+    # -------------------------
+    # Completion summary
+    # -------------------------
+    if completed == len(SCENARIOS):
+        badge = "🥇 Gold" if avg_pct >= 85 else "🥈 Silver" if avg_pct >= 70 else "🥉 Bronze"
+        st.markdown(
+            f"<div class='card'><b>🏁 Your result:</b> {badge} • Recognition {avg_pct}% • Confidence {avg_conf}%<br>"
+            f"<span class='small'>Tip: repeat the ‘CEO voice-clone’ next week — repetition cements habits.</span></div>",
+            unsafe_allow_html=True
+        )
+
+    # Nav buttons
     c1, c2 = st.columns(2)
     with c1:
-        st.button("⬅ Back to Detailed", on_click=lambda: st.session_state.update({"page":"Detailed"}))
+        st.button("⬅ Back to Detailed", on_click=lambda: st.session_state.update({"page": "Detailed"}))
     with c2:
-        st.button("Go to report ➜", type="primary", on_click=lambda: st.session_state.update({"page":"Report"}))
+        st.button("Go to report ➜", type="primary", on_click=lambda: st.session_state.update({"page": "Report"}))
+# ─────────────────────────────────────────────────────────────
