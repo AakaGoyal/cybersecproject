@@ -7,6 +7,7 @@ import csv
 import datetime as dt
 from typing import List, Dict, Tuple, Optional
 import streamlit as st
+import html
 
 # ─────────────────────────────────────────────────────────────
 # Page setup & styling
