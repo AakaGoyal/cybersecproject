@@ -1,4 +1,3 @@
-
 # app.py — SME Cybersecurity Self-Assessment (single file)
 # UX: dense Step 1 & 3; inline hints; simulations moved to final step.
 # Includes: Awareness & AI Risk domain, five-band maturity with light weighting,
@@ -752,6 +751,3 @@ if st.session_state.page == "Learn & Simulate":
         st.button("⬅ Back to report", on_click=lambda: st.session_state.update({"page":"Report"}))
     with c2:
         st.button("Start over", on_click=lambda: [st.session_state.update(defaults), st.session_state.update({"page":"Landing"})])
-```
-
-If anything else trips, ping me the line number and I’ll tighten it up fast.
