@@ -552,111 +552,213 @@ if st.session_state.page == "Detailed":
     st.button("⬅ Back to Baseline", on_click=lambda: st.session_state.update({"page":"Step 3"}))
 
 # ─────────────────────────────────────────────────────────────
-# REPORT — Action Tiles + Top 5 actions + exports; link to Simulations
+# UI — Report (Final Dashboard) — 3-up responsive grid version
 # ─────────────────────────────────────────────────────────────
 if st.session_state.page == "Report":
-    small_privacy_link()
+    # ===== Styling for grid + tiles + pills =====
+    st.markdown("""
+    <style>
+      .grid-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+      @media (max-width:1200px){.grid-tiles{grid-template-columns:repeat(2,minmax(0,1fr));}}
+      @media (max-width:780px){.grid-tiles{grid-template-columns:1fr;}}
+
+      .tile{border:1px solid #e6e8ec;background:#fff;border-radius:14px;padding:14px;
+            display:flex;flex-direction:column;min-height:190px}
+      .tile h4{margin:0 0 .25rem}
+      .tile small{color:#64748b}
+      .tile .meta{margin-top:auto;font-size:.86rem;color:#64748b}
+
+      .rag{display:inline-flex;gap:.35rem;align-items:center;font-weight:600;
+           border-radius:999px;padding:.18rem .55rem;border:1px solid #e6e8ec}
+      .rag.green{background:#e8f7ee;color:#0f5132;border-color:#cceedd}
+      .rag.amber{background:#fff5d6;color:#8a6d00;border-color:#ffe7ad}
+      .rag.red{background:#ffe5e5;color:#842029;border-color:#ffcccc}
+
+      .minibar{height:8px;background:#f1f5f9;border-radius:999px;border:1px solid #e5e7eb;
+               overflow:hidden;margin:.4rem 0 .6rem}
+      .minibar span{display:block;height:100%}
+      .minibar.green span{background:#16a34a}
+      .minibar.amber span{background:#f59e0b}
+      .minibar.red span{background:#ef4444}
+
+      .pill{border:1px solid #e6e8ec;border-radius:999px;padding:.08rem .45rem;
+            display:inline-flex;gap:.35rem;align-items:center}
+      .why{margin:.15rem 0 .45rem;color:#475569}
+      details summary{cursor:pointer;font-weight:600;margin-top:.2rem}
+      details ul{margin:.35rem 0 .25rem .95rem}
+    </style>
+    """, unsafe_allow_html=True)
+
     st.markdown("## 🌟 Recommendations & Section Status")
 
-    scores_pct: Dict[str,float] = st.session_state.get("detailed_scores_pct", {})
+    # ===== Helper content: concise "Do next" & Why-it-matters per domain =====
+    DO_NEXT = {
+        "Access & Identity": [
+            "Turn on MFA for email, admin and finance roles.",
+            "Remove unused accounts; review admin rights quarterly.",
+            "Use a password manager and strong passwords."
+        ],
+        "Device & Data": [
+            "Enable full-disk encryption on laptops/phones.",
+            "Back up important files and test a restore each quarter.",
+            "Separate guest and company Wi-Fi."
+        ],
+        "System & Software Updates": [
+            "Enable auto-updates for OS and apps.",
+            "Replace or isolate unsupported systems.",
+            "Add a 10-minute monthly update check."
+        ],
+        "Incident Preparedness": [
+            "Publish a one-page incident plan and contacts.",
+            "Set up an easy ‘report suspicious’ route.",
+            "Run a 30-minute tabletop twice a year."
+        ],
+        "Vendor & Cloud": [
+            "Enforce MFA for all cloud tenants/admins.",
+            "Keep a list of vendors/integrations and remove unused.",
+            "Check DPAs/security pages for key suppliers."
+        ],
+        "Governance": [
+            "Approve a short security policy and owners.",
+            "Keep basic records (assets, incidents, backups).",
+            "Review top risks annually."
+        ],
+        "Awareness & AI Risk": [
+            "Quarterly micro-training on phish/voice-clone cues.",
+            "Have a back-channel to verify urgent requests.",
+            "Track reporting rate and time-to-report."
+        ],
+    }
+
+    WHY = {
+        "Access & Identity":
+            "Identity is the blast radius. Strong passwords + MFA + least privilege stop most takeovers.",
+        "Device & Data":
+            "Encrypted, managed devices and tested backups limit impact and speed up recovery.",
+        "System & Software Updates":
+            "Most compromises exploit known vulnerabilities. Staying current closes easy doors.",
+        "Incident Preparedness":
+            "Clear steps and a way to raise a hand reduce dwell time and panic when something happens.",
+        "Vendor & Cloud":
+            "Third-party access is common. Knowing who has what reduces surprise exposures.",
+        "Governance":
+            "Named responsibilities and simple records make security visible and repeatable.",
+        "Awareness & AI Risk":
+            "AI polishes deception. Recognition habits and back-channels keep people from being rushed."
+    }
+
+    scores_pct: Dict[str, float] = st.session_state.get("detailed_scores_pct", {})
+    lookup = {s["id"]: s for s in ALL_SECTIONS}
+
+    # ===== Overall maturity with traffic-light pill =====
+    overall_pct, band = overall_maturity(ALL_SECTIONS)
+    emoji_overall, risk_label, klass_overall = section_light_from_pct(overall_pct)
+    risk_text = {"green":"Low", "amber":"Moderate", "red":"High"}[klass_overall]
+    st.markdown(
+        f"### 🔭 Overall maturity: **{overall_pct}% · {band}** "
+        f"<span class='rag {klass_overall}'>{emoji_overall} {risk_text} risk</span>",
+        unsafe_allow_html=True
+    )
+    st.caption("Traffic light reflects estimated residual risk; weighted by domain importance.")
+
+    # ===== Guard if no scores yet =====
     if not scores_pct:
-        st.caption("No detailed scores yet.")
+        st.info("Run the detailed assessment to see recommendations.")
     else:
-        # Overall + Top actions (sorted by low score)
-        overall_pct, band = overall_maturity(ALL_SECTIONS)
-        st.markdown(f"### 🔭 Overall maturity: **{overall_pct}% · {band}**")
+        # Sort by lowest score first (most urgent first)
+        sorted_items = sorted(scores_pct.items(), key=lambda kv: kv[1])
 
-        # Build Top 5 list from weakest domains
-        ordered = sorted(scores_pct.items(), key=lambda kv: kv[1])
-        top_actions=[]
-        for sid, _ in ordered:
-            for a in ACTIONS.get(sid, []):
-                if len(top_actions) >= 5: break
-                if a not in top_actions: top_actions.append(a)
-            if len(top_actions) >= 5: break
-        st.markdown("#### ⏱️ Top 5 actions to do next")
-        st.markdown("\n".join([f"{i}. {x}" for i,x in enumerate(top_actions,1)]))
+        # Render a responsive grid of tiles
+        st.markdown("<div class='grid-tiles'>", unsafe_allow_html=True)
+        for sid, pct in sorted_items:
+            emoji, label, klass = section_light_from_pct(pct)
+            tags_text = " · ".join(STD_MAP.get(sid, []))
+            recs = DO_NEXT.get(sid, [])
+            head = recs[:2]
+            tail = recs[2:]
 
-        st.markdown("#### Domain status")
-        st.markdown("<div class='tile-grid'>", unsafe_allow_html=True)
-        for sid, pct in scores_pct.items():
-            emoji,label,klass = section_light_from_pct(pct)
-            actions = ACTIONS.get(sid, [])
-            tags = " · ".join(STD_MAP.get(sid, []))
-            html=f"""
+            tile_html = f"""
             <div class="tile">
-              <div class="align-spread">
-                <div style="font-weight:700">{sid}</div>
-                <div class="chip {klass}">{emoji} {label}</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                <h4 style="margin:0">{sid}</h4>
+                <span class="rag {klass}">{emoji} {label}</span>
               </div>
-              <div class="muted" style="margin:.25rem 0">Score: {pct:.2f}/100</div>
-              <div class="bar {klass}"><span style="width:{pct}%"></span></div>
-              <div style="margin:.6rem 0 .2rem; font-weight:600">Do next</div>
-              <ul style="margin-top:.2rem">
-                <li>{actions[0] if len(actions)>0 else ''}</li>
-                <li>{actions[1] if len(actions)>1 else ''}</li>
-                <li>{actions[2] if len(actions)>2 else ''}</li>
+
+              <div class="minibar {klass}"><span style="width:{pct:.2f}%"></span></div>
+              <small>Score: {pct:.2f}/100</small>
+
+              <div class="why"><b>Do next</b></div>
+              <ul style="margin:.1rem 0 .25rem .95rem">
+                {''.join(f'<li>{st.utils.escape_markdown(item, False)}</li>' for item in head)}
               </ul>
-              <div class="muted">Tags: {tags}</div>
+            """
+
+            # "More" (details element) if extra items exist
+            if tail:
+                more_list = "".join(f"<li>{st.utils.escape_markdown(x, False)}</li>" for x in tail)
+                tile_html += f"""
+                <details>
+                  <summary>More</summary>
+                  <ul>{more_list}</ul>
+                </details>
+                """
+
+            # Why it matters + tags in the meta row
+            why_txt = WHY.get(sid, "")
+            tile_html += f"""
+              <details style="margin-top:.25rem">
+                <summary>Why this matters</summary>
+                <div style="margin-top:.25rem">{why_txt}</div>
+              </details>
+
+              <div class="meta">
+                <span class="pill" title="{tags_text}">Tags</span>
+                <span style="margin-left:.35rem">{tags_text}</span>
+              </div>
             </div>
             """
-            st.markdown(html, unsafe_allow_html=True)
+
+            st.markdown(tile_html, unsafe_allow_html=True)
+
         st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("---")
-    c1,c2,c3 = st.columns(3)
-    with c1:
-        st.download_button("Download results (CSV)", data=build_csv(), file_name="cyber-assessment-results.csv", mime="text/csv")
-    with c2:
-        st.download_button("Download summary (Markdown)", data=build_markdown_summary().encode("utf-8"), file_name="cyber-assessment-summary.md", mime="text/markdown")
-    with c3:
-        st.button("Go to simulations ➜", type="primary", on_click=lambda: st.session_state.update({"page":"Simulations"}))
+        st.markdown("---")
 
-    st.button("⬅ Back to Detailed", on_click=lambda: st.session_state.update({"page":"Detailed"}))
+        # Optional: keep your “Top actions” section beneath the grid if you like
+        # (or remove if redundant with the tiles)
+        st.markdown("#### Top 5 actions (quick wins)")
+        quick = []
+        if st.session_state.df_website == "Yes" and st.session_state.df_https != "Yes":
+            quick.append("Enable HTTPS and force redirect (HTTP→HTTPS).")
+        if st.session_state.df_email in ("No","Partially"):
+            quick.append("Move to business email (M365/Google) and enforce MFA.")
+        if st.session_state.bp_inventory not in ("Yes","Partially"):
+            quick.append("Start a device inventory and enable full-disk encryption on laptops.")
+        # Fill up with the most urgent domain’s first actions if list is short
+        if len(quick) < 5:
+            for sid, _ in sorted_items:
+                for rec in DO_NEXT.get(sid, [])[:2]:
+                    if rec not in quick:
+                        quick.append(rec)
+                    if len(quick) >= 5:
+                        break
+                if len(quick) >= 5:
+                    break
+        st.markdown("\n".join([f"{i}. {x}" for i, x in enumerate(quick[:5], 1)]))
 
-# ─────────────────────────────────────────────────────────────
-# SIMULATIONS — improved, still safe/read-only
-# ─────────────────────────────────────────────────────────────
-if st.session_state.page == "Simulations":
-    small_privacy_link()
-    st.markdown("## 🧪 Guided simulations (safe, read-only)")
-    st.caption("No messages are sent. Nothing is stored. These are short previews to practise recognition.")
+        st.markdown("---")
+        # Exports remain the same
+        st.markdown("### ⬇️ Export results")
+        st.download_button("Download results (CSV)", data=build_csv(),
+                           file_name="cyber-assessment-results.csv", mime="text/csv")
+        st.download_button("Download summary (Markdown)",
+                           data=build_markdown_summary().encode("utf-8"),
+                           file_name="cyber-assessment-summary.md",
+                           mime="text/markdown")
 
-    # Scenario 1: Invoice phish
-    with st.expander("🎣 Invoice phish — spot the red flags"):
-        st.write("**Message**: “From: Accounts <accounts@trusted-lookalike.com> — Please review the attached invoice ASAP.”")
-        c1,c2 = st.columns([2,1])
-        with c1:
-            s1_a = st.checkbox("Urgent tone pushes for speed")
-            s1_b = st.checkbox("Display name looks familiar but address is odd")
-            s1_c = st.checkbox("Attachment/link from unknown sender")
-            s1_d = st.checkbox("Payment details changed without notice")
-            show1 = st.toggle("Show explanation")
-        with c2:
-            score1 = sum([s1_a,s1_b,s1_c,s1_d])
-            st.markdown(f"**Your finds:** {score1}/4")
-        if show1:
-            st.markdown("- Hover over links; check the real address.\n- Verify invoices via a known contact or system, not the email.")
-
-    # Scenario 2: CEO voice clone
-    with st.expander("🗣️ CEO voice-clone request — what to do"):
-        st.write("**Scenario**: a short voice note asking to urgently change bank details.")
-        s2 = st.multiselect("Pick the safest steps:",
-                            ["Call the known number to confirm","Reply to the message quickly","Ask finance to pay first","Log it via the report route"])
-        show2 = st.toggle("Show answer (safest steps)", key="s2")
-        if show2:
-            st.markdown("**Best steps:** Call the known number to confirm; log via report route. Never act on an unverified payment request.")
-
-    # Scenario 3: “Security alert” login lure
-    with st.expander("🔐 ‘Security alert’ login lure — real or fake?"):
-        st.write("**Message**: “Your account will be locked. Reset password now.”")
-        s3_a = st.checkbox("Generic greeting / no names")
-        s3_b = st.checkbox("Links point to a lookalike domain")
-        s3_c = st.checkbox("Push to click immediately")
-        show3 = st.toggle("Show explanation", key="s3")
-        if show3:
-            st.markdown("- Don’t click. Go to the site directly or your normal sign-in route.\n- Report the message so others are warned.")
-
-    st.markdown("---")
-    st.button("⬅ Back to report", on_click=lambda: st.session_state.update({"page":"Report"}))
-    st.button("Start over", on_click=lambda: [st.session_state.update(defaults), st.session_state.update({"page":"Landing"})])
+        cA, cB = st.columns(2)
+        with cA:
+            st.button("⬅ Back to Detailed", on_click=lambda: st.session_state.update({"page":"Detailed"}))
+        with cB:
+            st.button("Start over", on_click=lambda: [st.session_state.update(defaults),
+                                                      st.session_state.update({"page":"Step 1"})])
