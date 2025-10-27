@@ -690,13 +690,13 @@ if st.session_state.page == "Report":
 
               <div class="why"><b>Do next</b></div>
               <ul style="margin:.1rem 0 .25rem .95rem">
-                {''.join(f'<li>{st.utils.escape_markdown(item, False)}</li>' for item in head)}
+                {''.join(f'<li>{html.escape(item, quote=True)}</li>' for item in head)}
               </ul>
             """
 
             # "More" (details element) if extra items exist
             if tail:
-                more_list = "".join(f"<li>{st.utils.escape_markdown(x, False)}</li>" for x in tail)
+                more_list = "".join(f"<li>{html.escape(x, quote=True)}</li>" for x in tail)
                 tile_html += f"""
                 <details>
                   <summary>More</summary>
