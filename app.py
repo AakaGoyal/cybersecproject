@@ -1,6 +1,8 @@
-# app.py — SME Cybersecurity Self-Assessment (single file)
-# Includes: Awareness & AI Risk domain, 0–100 five-band maturity (light weighting),
-# standards mapping, guided simulations, privacy notice, and CSV/Markdown exports.
+# app.py — SME Cybersecurity Self-Assessment (single file, polished v1)
+# Includes: Landing page, Awareness & AI Risk domain, 0–100 five-band maturity,
+# light domain weighting (equal per-item weights), standards mapping with DE,
+# guided simulations, privacy notice, accessible colours, and CSV/Markdown exports.
+# PDF export is planned (placeholder button included).
 
 import csv
 from io import StringIO
@@ -9,45 +11,90 @@ import datetime as dt
 import streamlit as st
 
 # ─────────────────────────────────────────────────────────────
-# Page setup & compact theme
+# Page setup & theme (accessible colours + subtle polish)
 # ─────────────────────────────────────────────────────────────
 st.set_page_config(page_title="SME Cybersecurity Self-Assessment", layout="wide")
 
 st.markdown("""
 <style>
   :root{
-    --fg:#1f2937; --muted:#475569; --soft:#6b7280;
-    --line:#e6e8ec; --card:#ffffff;
-    --green:#16a34a; --amber:#f59e0b; --red:#ef4444;
-    --green-bg:#e8f7ee; --amber-bg:#fff5d6; --red-bg:#ffe5e5;
+    /* Base colours */
+    --fg:#0f172a;          /* slate-900 for stronger contrast */
+    --muted:#334155;       /* slate-700 */
+    --soft:#475569;        /* slate-600 */
+    --line:#e5e7eb;        /* gray-200 */
+    --card:#ffffff;
+
+    /* Status colours: darker for better contrast */
+    --green:#12873a;       /* darker green for meters */
+    --amber:#b45309;       /* darker amber */
+    --red:#b91c1c;         /* darker red */
+
+    /* Background tints (higher contrast on white text) */
+    --green-bg:#e6f4ea;    /* light green bg */
+    --amber-bg:#fff2d6;    /* light amber bg */
+    --red-bg:#fde2e2;      /* light red bg */
+
+    /* Landing gradient */
+    --grad-a:#f8fbff;
+    --grad-b:#eef4ff;
   }
+
+  /* Page container */
   .block-container {max-width: 1160px; padding-top: 10px;}
   header {visibility: hidden;}
+
+  /* Global typography */
   h1,h2,h3,h4 {margin:.25rem 0 .55rem; color:var(--fg)}
-  .hint {color:#394b63; font-size:.98rem; font-style:italic; margin:.25rem 0 .75rem; line-height:1.4}
-  .pill {display:inline-block;border-radius:999px;padding:.18rem .55rem;border:1px solid #e5e7eb;font-size:.9rem;color:#374151;background:#fff}
+  p, li, label {color:var(--fg)}
+  .hint {color:#3b4a66; font-size:.98rem; font-style:italic; margin:.25rem 0 .75rem; line-height:1.4}
+  .lead {color:#1f2937; font-size:1.05rem; margin:.25rem 0 .75rem}
+
+  /* Reusable chips & pills */
+  .pill {display:inline-block;border-radius:999px;padding:.2rem .6rem;border:1px solid #e5e7eb;font-size:.9rem;color:#111827;background:#fff}
   .chip {display:inline-flex;align-items:center;gap:.35rem;border-radius:999px;padding:.18rem .6rem;border:1px solid var(--line);margin-right:.35rem;font-weight:600}
-  .green{background:var(--green-bg);color:#0f5132;border-color:#cceedd}
-  .amber{background:var(--amber-bg);color:#8a6d00;border-color:#ffe7ad}
-  .red{background:var(--red-bg);color:#842029;border-color:#ffcccc}
-  .card {border:1px solid var(--line);border-radius:14px;padding:14px;background:#fff}
+  .green{background:var(--green-bg);color:#0b3d25;border-color:#c7ead2}
+  .amber{background:var(--amber-bg);color:#6b3a00;border-color:#ffe0a8}
+  .red{background:var(--red-bg);color:#7a1b1b;border-color:#f7caca}
+
+  /* Cards & layout */
+  .card {border:1px solid var(--line);border-radius:16px;padding:16px;background:var(--card); box-shadow:0 1px 2px rgba(15,23,42,.04);}
   .sticky {position: sticky; top: 10px;}
+
+  /* Score grid & meters */
   .score-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
   @media (max-width:1100px){ .score-grid{grid-template-columns:repeat(3,minmax(0,1fr));} }
   @media (max-width:700px){ .score-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
-  .score-card{border:1px solid var(--line);border-radius:16px;padding:14px;background:#fff}
+  .score-card{border:1px solid var(--line);border-radius:16px;padding:14px;background:#fff; box-shadow:0 1px 2px rgba(15,23,42,.04);}
   .score-title{font-weight:700;margin-bottom:.25rem}
-  .meter{height:8px;border-radius:999px;background:#f1f5f9;overflow:hidden;margin-top:.35rem;border:1px solid #e5e7eb}
+  .meter{height:9px;border-radius:999px;background:#f1f5f9;overflow:hidden;margin-top:.35rem;border:1px solid #e5e7eb}
   .meter > span{display:block;height:100%}
   .meter.green > span{background:var(--green)}
   .meter.amber > span{background:var(--amber)}
   .meter.red > span{background:var(--red)}
   .status-pill{display:inline-flex;align-items:center;gap:.35rem;padding:.15rem .55rem;border:1px solid var(--line); font-weight:600}
+
+  /* Landing page visuals */
+  .landing-wrap{
+    background: linear-gradient(180deg, var(--grad-a), var(--grad-b));
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:28px 24px;
+    box-shadow:0 2px 6px rgba(15,23,42,.06);
+  }
+  .landing-title{font-size:1.5rem; font-weight:800; margin-bottom:.25rem; color:#0f172a}
+  .landing-sub{color:#334155; margin:.25rem 0 .5rem}
+  .landing-list{color:#1f2937; margin:.25rem 0 .75rem}
+  .footer-note{color:#475569; font-size:.9rem; margin-top:8px}
+
+  /* Tighten progress spacing */
+  .stProgress {margin-top:.3rem;margin-bottom:.8rem}
 </style>
 """, unsafe_allow_html=True)
 
+# Title + Privacy (landing and all steps)
 st.title("🛡️ SME Cybersecurity Self-Assessment")
-st.info("**Privacy:** All inputs stay in this session only. No data is sent or stored. Use synthetic or anonymised details if unsure.")
+st.info("**Privacy:** All inputs stay within this session; no data is persisted. If using a hosted deployment (e.g., Streamlit Cloud), inputs are processed on the hosting provider and not retained after the session. Use synthetic or anonymised details if unsure.")
 
 # ─────────────────────────────────────────────────────────────
 # Constants
@@ -88,7 +135,7 @@ CERTIFICATION_OPTIONS = [
 TURNOVER_TO_SIZE = {**{k:"Micro" for k in TURNOVER_OPTIONS[:11]}, **{"€2M–€5M":"Small","€5M–€10M":"Small",">€10M":"Medium"}}
 EMP_RANGE_TO_SIZE = {"1–5":"Micro","6–10":"Micro","10–25":"Small","26–50":"Small","51–100":"Medium","More than 100":"Medium"}
 
-# Five-band model + light weighting + standards mapping
+# Five-band maturity model; equal per-item weight, light domain-level weighting
 ANSWER_VAL = {"Yes":100, "Partially":50, "Not sure":50, "No":0}
 BANDS = [(0,20,"Very Low"),(21,40,"Low"),(41,60,"Moderate"),(61,80,"Good"),(81,100,"Strong")]
 DOMAIN_WEIGHT = {
@@ -100,17 +147,26 @@ STD_MAP = {
   "Access & Identity": ["NIST: PR.AC","ISO: A.5/A.8"],
   "Device & Data": ["NIST: PR.DS/PR.IP","ISO: A.8/A.12"],
   "System & Software Updates": ["NIST: PR.IP","ISO: A.8.8/A.12.6"],
-  "Incident Preparedness": ["NIST: RS/RC","ISO: A.5.24/A.5.25"],
+  "Incident Preparedness": ["NIST: DE/RS/RC","ISO: A.5.24/A.5.25"],   # includes Detect (DE)
   "Vendor & Cloud": ["NIST: ID.SC/PR.AT","ISO: A.5.19/A.5.20"],
   "Governance": ["NIST: ID.GV","ISO: A.5 (org controls)"],
-  "Awareness & AI Risk": ["NIST: PR.AT/ID.BE","ISO: A.6.3 (awareness)"]
+  "Awareness & AI Risk": ["NIST: PR.AT/DE","ISO: A.6.3 (awareness)"]  # includes Detect (DE)
+}
+WHY_MATTERS = {
+  "Governance":"Clear ownership and simple records prevent gaps and speed decisions during incidents.",
+  "Access & Identity":"Strong authentication and least privilege block common takeovers (phishing, reuse).",
+  "Device & Data":"Encrypted, backed-up devices turn disasters into hiccups and reduce breach impact.",
+  "System & Software Updates":"Patching closes known holes attackers routinely scan for.",
+  "Incident Preparedness":"Practised reporting and roles cut downtime and limit spread.",
+  "Vendor & Cloud":"Knowing who holds your data and access reduces third-party blast radius.",
+  "Awareness & AI Risk":"AI-polished scams look real; recognition and backchannels stop costly mistakes."
 }
 
 # ─────────────────────────────────────────────────────────────
-# State (no default pre-selections for radios)
+# State (start at Landing page; no default pre-selections)
 # ─────────────────────────────────────────────────────────────
 defaults = dict(
-    page="Step 1",
+    page="Home",  # Landing page first
     email_for_report="", person_name="", company_name="",
     sector_label=INDUSTRY_OPTIONS[0], sector_other="", years_in_business=YEARS_OPTIONS[0],
     employee_range=EMPLOYEE_RANGES[0], turnover_label=TURNOVER_OPTIONS[0],
@@ -129,10 +185,12 @@ for k, v in defaults.items():
 # Helpers
 # ─────────────────────────────────────────────────────────────
 def progress(step:int, total:int=5, label:str=""):
+    """Progress used only for Steps 1–5 (Landing page excluded)."""
     pct = max(0, min(step, total)) / total
     st.progress(pct, text=label or f"Step {step} of {total}")
 
 def radio_none(label:str, options:List[str], *, key:str, horizontal:bool=True, help:Optional[str]=None, placeholder: str = "— select —"):
+    """Radio with a placeholder so nothing is preselected."""
     ui_key = f"{key}__ui"
     ui_options = [placeholder] + list(options)
     current = st.session_state.get(key, "")
@@ -169,11 +227,11 @@ def area_rag():
     else: net=("⚪ Unknown","")
     return sys,ppl,net
 
-def section(title_id, questions): 
+def section(title_id, questions):
     return {"id":title_id, "title":title_id, "questions":questions}
 
 # ─────────────────────────────────────────────────────────────
-# Question bank (single file)
+# Question bank (embedded, single file; equal per-item weights)
 # ─────────────────────────────────────────────────────────────
 SECTION_3 = section("Access & Identity", [
     {"id":"ai_pw","t":"🔑 Are strong passwords required for all accounts?","h":"Use a password manager; 10–12+ chars per account."},
@@ -229,12 +287,13 @@ SECTION_AI = section("Awareness & AI Risk", [
 ALL_SECTIONS = [SECTION_3, SECTION_4, SECTION_5, SECTION_6, SECTION_7, SECTION_9, SECTION_AI]
 
 # ─────────────────────────────────────────────────────────────
-# Scoring
+# Scoring (equal per-item weights; light domain-level weighting)
 # ─────────────────────────────────────────────────────────────
 def section_score_pct(sec:Dict)->float:
     vals=[st.session_state.get(q["id"],"") for q in sec["questions"]]
     if not vals: return 0.0
-    return round(sum(ANSWER_VAL.get(v,50) for v in vals)/len(vals),2)
+    # Equal per-item weights in v1 (Yes=100, Partially/Not sure=50, No=0)
+    return round(sum(ANSWER_VAL.get(v,50) for v in vals)/len(vals), 2)
 
 def section_light_from_pct(pct:float)->Tuple[str,str,str]:
     if pct >= 70: return ("🟢","Low","green")
@@ -334,6 +393,37 @@ def build_csv()->bytes:
     return out.getvalue().encode("utf-8")
 
 # ─────────────────────────────────────────────────────────────
+# UI — Landing Page (Home)
+# ─────────────────────────────────────────────────────────────
+if st.session_state.page == "Home":
+    c1, c2 = st.columns([1.1, 1.9], gap="large")
+    with c1:
+        st.markdown('<div class="sticky">', unsafe_allow_html=True)
+        st.markdown("### Why this tool?")
+        st.markdown("""
+- See your **human-factor** cyber posture in minutes  
+- Explore **safe simulations** of social-engineering patterns  
+- Get **clear next steps** mapped to familiar practice (ISO/NIST)
+        """)
+        st.markdown('</div>', unsafe_allow_html=True)
+    with c2:
+        st.markdown('<div class="landing-wrap">', unsafe_allow_html=True)
+        st.markdown('<div class="landing-title">Social Engineering Attack Simulation & Self-Assessment Framework for SMEs</div>', unsafe_allow_html=True)
+        st.markdown('<div class="landing-sub">A lightweight, transparent way to assess maturity and prioritise improvements.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="lead">Runs locally or via Streamlit Cloud. No personal data is stored or transmitted.</div>', unsafe_allow_html=True)
+        st.markdown("**How it works**", unsafe_allow_html=True)
+        st.markdown("""
+1. Tell us about the business  
+2. Capture your operational context  
+3. Answer nine quick baseline questions  
+4. See a summary and explore safe simulations  
+5. Complete the detailed assessment for per-domain scores
+        """)
+        st.button("Start Assessment ➜", type="primary", use_container_width=True,
+                  on_click=lambda: st.session_state.update({"page":"Step 1"}))
+        st.markdown('<div class="footer-note">Version 1.0 · Last updated: October 2025</div>', unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────────────────────
 # UI — Step 1 (Business basics)
 # ─────────────────────────────────────────────────────────────
 if st.session_state.page == "Step 1":
@@ -393,7 +483,7 @@ if st.session_state.page == "Step 1":
 
         cA, cB = st.columns(2)
         with cA:
-            st.button("Start over", on_click=lambda: [st.session_state.update(defaults)])
+            st.button("⬅ Back to Landing", on_click=lambda: st.session_state.update({"page":"Home"}))
         with cB:
             st.button("Continue ➜", type="primary", disabled=len(missing)>0,
                       on_click=lambda: st.session_state.update({"page":"Step 2"}))
@@ -578,7 +668,7 @@ if st.session_state.page == "Step 4":
     with c1:
         st.button("⬅ Back", on_click=lambda: st.session_state.update({"page":"Step 3"}))
     with c2:
-        st.button("Start over", on_click=lambda: [st.session_state.update(defaults), st.session_state.update({"page":"Step 1"})])
+        st.button("Start over", on_click=lambda: [st.session_state.update(defaults), st.session_state.update({"page":"Home"})])
     with c3:
         st.button("Continue to detailed assessment ➜", type="primary",
                   on_click=lambda: st.session_state.update({"detailed_sections":[s["id"] for s in ALL_SECTIONS],
@@ -639,13 +729,16 @@ if st.session_state.page == "Report":
         st.markdown("<div class='score-grid'>", unsafe_allow_html=True)
         for sid, pct in scores_pct.items():
             emoji,label,klass = section_light_from_pct(pct)
+            tags = " · ".join(STD_MAP.get(sid, []))
+            why = WHY_MATTERS.get(sid, "")
             html = f"""
             <div class="score-card">
               <div class="score-title">{sid}</div>
               <div class="status-pill">{emoji} <span>{label}</span></div>
-              <div style="font-size:.92rem;color:#475569;margin-top:.35rem">Score: {pct:.2f}/100</div>
+              <div style="font-size:.92rem;color:#1f2937;margin-top:.35rem">Score: {pct:.2f}/100</div>
               <div class="meter {klass}"><span style="width:{pct}%"></span></div>
-              <div style="font-size:.86rem;color:#64748b;margin-top:.25rem">{' · '.join(STD_MAP.get(sid, []))}</div>
+              <div style="font-size:.86rem;color:#475569;margin-top:.35rem">{tags}</div>
+              <div style="font-size:.92rem;color:#0f172a;margin-top:.45rem"><b>Why it matters:</b> {why}</div>
             </div>
             """
             st.markdown(html, unsafe_allow_html=True)
@@ -685,9 +778,10 @@ if st.session_state.page == "Report":
     st.markdown("### ⬇️ Export results")
     st.download_button("Download results (CSV)", data=build_csv(), file_name="cyber-assessment-results.csv", mime="text/csv")
     st.download_button("Download summary (Markdown)", data=build_markdown_summary().encode("utf-8"), file_name="cyber-assessment-summary.md", mime="text/markdown")
+    st.button("Export as PDF (coming soon)", disabled=True, help="PDF export with accessible tagging will be added in a future version.")
 
     cA, cB = st.columns(2)
     with cA:
         st.button("⬅ Back to Detailed", on_click=lambda: st.session_state.update({"page":"Detailed"}))
     with cB:
-        st.button("Start over", on_click=lambda: [st.session_state.update(defaults), st.session_state.update({"page":"Step 1"})])
+        st.button("Start over", on_click=lambda: [st.session_state.update(defaults), st.session_state.update({"page":"Home"})])
