@@ -1,8 +1,7 @@
-# app.py — SME Cybersecurity Self-Assessment (single file, polished v1)
-# Includes: Landing page, Awareness & AI Risk domain, 0–100 five-band maturity,
-# light domain weighting (equal per-item weights), standards mapping with DE,
-# guided simulations, privacy notice, accessible colours, and CSV/Markdown exports.
-# PDF export is planned (placeholder button included).
+# app.py — SME Cybersecurity Self-Assessment (single file)
+# UX: dense Step 1 & 3; inline hints; simulations moved to final step.
+# Includes: Awareness & AI Risk domain, five-band maturity with light weighting,
+# standards mapping (incl. Detect), privacy notice, CSV/Markdown exports.
 
 import csv
 from io import StringIO
@@ -11,90 +10,73 @@ import datetime as dt
 import streamlit as st
 
 # ─────────────────────────────────────────────────────────────
-# Page setup & theme (accessible colours + subtle polish)
+# Page setup & theme
 # ─────────────────────────────────────────────────────────────
 st.set_page_config(page_title="SME Cybersecurity Self-Assessment", layout="wide")
 
 st.markdown("""
 <style>
   :root{
-    /* Base colours */
-    --fg:#0f172a;          /* slate-900 for stronger contrast */
-    --muted:#334155;       /* slate-700 */
-    --soft:#475569;        /* slate-600 */
-    --line:#e5e7eb;        /* gray-200 */
-    --card:#ffffff;
-
-    /* Status colours: darker for better contrast */
-    --green:#12873a;       /* darker green for meters */
-    --amber:#b45309;       /* darker amber */
-    --red:#b91c1c;         /* darker red */
-
-    /* Background tints (higher contrast on white text) */
-    --green-bg:#e6f4ea;    /* light green bg */
-    --amber-bg:#fff2d6;    /* light amber bg */
-    --red-bg:#fde2e2;      /* light red bg */
-
-    /* Landing gradient */
-    --grad-a:#f8fbff;
-    --grad-b:#eef4ff;
+    --fg:#111827; --muted:#4b5563; --soft:#6b7280;
+    --line:#e5e7eb; --card:#ffffff; --bg:#fafafa;
+    --green:#16a34a; --amber:#f59e0b; --red:#ef4444; --blue:#2563eb;
+    --green-bg:#e8f7ee; --amber-bg:#fff5d6; --red-bg:#ffe5e5; --blue-bg:#e8f0ff;
   }
-
-  /* Page container */
-  .block-container {max-width: 1160px; padding-top: 10px;}
+  .block-container {max-width: 1180px; padding-top: 10px;}
   header {visibility: hidden;}
-
-  /* Global typography */
-  h1,h2,h3,h4 {margin:.25rem 0 .55rem; color:var(--fg)}
-  p, li, label {color:var(--fg)}
-  .hint {color:#3b4a66; font-size:.98rem; font-style:italic; margin:.25rem 0 .75rem; line-height:1.4}
-  .lead {color:#1f2937; font-size:1.05rem; margin:.25rem 0 .75rem}
-
-  /* Reusable chips & pills */
-  .pill {display:inline-block;border-radius:999px;padding:.2rem .6rem;border:1px solid #e5e7eb;font-size:.9rem;color:#111827;background:#fff}
+  h1,h2,h3,h4 {margin:.2rem 0 .5rem; color:var(--fg)}
+  .lead {color:#1f2937; margin:.2rem 0 .6rem}
+  .hint {color:#334155; font-size:.95rem; font-style:italic; margin:.20rem 0 .55rem; line-height:1.35}
+  .small {font-size:.92rem; color:#475569}
+  .pill {display:inline-block;border-radius:999px;padding:.18rem .55rem;border:1px solid #e5e7eb;font-size:.9rem;color:#374151;background:#fff}
   .chip {display:inline-flex;align-items:center;gap:.35rem;border-radius:999px;padding:.18rem .6rem;border:1px solid var(--line);margin-right:.35rem;font-weight:600}
-  .green{background:var(--green-bg);color:#0b3d25;border-color:#c7ead2}
-  .amber{background:var(--amber-bg);color:#6b3a00;border-color:#ffe0a8}
-  .red{background:var(--red-bg);color:#7a1b1b;border-color:#f7caca}
-
-  /* Cards & layout */
-  .card {border:1px solid var(--line);border-radius:16px;padding:16px;background:var(--card); box-shadow:0 1px 2px rgba(15,23,42,.04);}
+  .green{background:var(--green-bg);color:#0f5132;border-color:#cceedd}
+  .amber{background:var(--amber-bg);color:#8a6d00;border-color:#ffe7ad}
+  .red{background:var(--red-bg);color:#842029;border-color:#ffcccc}
+  .blue{background:var(--blue-bg);color:#1e3a8a;border-color:#c7d2fe}
+  .card {border:1px solid var(--line);border-radius:14px;padding:14px;background:#fff}
   .sticky {position: sticky; top: 10px;}
-
-  /* Score grid & meters */
   .score-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
   @media (max-width:1100px){ .score-grid{grid-template-columns:repeat(3,minmax(0,1fr));} }
   @media (max-width:700px){ .score-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
-  .score-card{border:1px solid var(--line);border-radius:16px;padding:14px;background:#fff; box-shadow:0 1px 2px rgba(15,23,42,.04);}
-  .score-title{font-weight:700;margin-bottom:.25rem}
-  .meter{height:9px;border-radius:999px;background:#f1f5f9;overflow:hidden;margin-top:.35rem;border:1px solid #e5e7eb}
+  .score-card{border:1px solid var(--line);border-radius:16px;padding:14px;background:#fff}
+  .score-title{font-weight:700;margin-bottom:.2rem}
+  .meter{height:8px;border-radius:999px;background:#f1f5f9;overflow:hidden;margin-top:.3rem;border:1px solid #e5e7eb}
   .meter > span{display:block;height:100%}
   .meter.green > span{background:var(--green)}
   .meter.amber > span{background:var(--amber)}
   .meter.red > span{background:var(--red)}
   .status-pill{display:inline-flex;align-items:center;gap:.35rem;padding:.15rem .55rem;border:1px solid var(--line); font-weight:600}
-
-  /* Landing page visuals */
-  .landing-wrap{
-    background: linear-gradient(180deg, var(--grad-a), var(--grad-b));
-    border:1px solid var(--line);
-    border-radius:20px;
-    padding:28px 24px;
-    box-shadow:0 2px 6px rgba(15,23,42,.06);
-  }
-  .landing-title{font-size:1.5rem; font-weight:800; margin-bottom:.25rem; color:#0f172a}
-  .landing-sub{color:#334155; margin:.25rem 0 .5rem}
-  .landing-list{color:#1f2937; margin:.25rem 0 .75rem}
-  .footer-note{color:#475569; font-size:.9rem; margin-top:8px}
-
-  /* Tighten progress spacing */
-  .stProgress {margin-top:.3rem;margin-bottom:.8rem}
+  /* Denser form spacing for Steps 1 & 3 */
+  .dense .stRadio > label, .dense .stSelectbox > label, .dense .stMultiselect > label {font-weight:700; font-size:1.03rem !important; color:var(--fg); margin-bottom:.1rem}
+  .dense div[role="radiogroup"] label p, .dense .stSelectbox p, .dense .stMultiselect p {font-size:.98rem !important; margin-bottom:.15rem}
+  .dense .stTextInput, .dense .stSelectbox, .dense .stMultiselect, .dense .stRadio {margin-bottom:.55rem}
+  .snapshot p{margin:.1rem 0}
 </style>
 """, unsafe_allow_html=True)
 
-# Title + Privacy (landing and all steps)
-st.title("🛡️ SME Cybersecurity Self-Assessment")
-st.info("**Privacy:** All inputs stay within this session; no data is persisted. If using a hosted deployment (e.g., Streamlit Cloud), inputs are processed on the hosting provider and not retained after the session. Use synthetic or anonymised details if unsure.")
+# ─────────────────────────────────────────────────────────────
+# Branding header
+# ─────────────────────────────────────────────────────────────
+def brand_header():
+    st.markdown(
+        "<h1>🛡️ SME Cybersecurity Self-Assessment</h1>",
+        unsafe_allow_html=True
+    )
+    st.info("**Privacy:** All inputs stay within this session; no data is persisted. "
+            "If using a hosted deployment (e.g., Streamlit Cloud), inputs are processed on the hosting provider and not retained after the session. "
+            "Use synthetic or anonymised details if unsure.")
+
+# ─────────────────────────────────────────────────────────────
+# Progress indicator (named steps)
+# ─────────────────────────────────────────────────────────────
+STEPS = ["Landing", "Business basics", "Operational context", "Your current practices",
+         "Summary", "Detailed assessment", "Report", "Learn & Simulate"]
+
+def progress_for(page:str):
+    order = {name:i for i,name in enumerate(STEPS, start=1)}
+    idx = order.get(page, 1)
+    st.progress(idx/len(STEPS), text=f"{page}")
 
 # ─────────────────────────────────────────────────────────────
 # Constants
@@ -135,7 +117,7 @@ CERTIFICATION_OPTIONS = [
 TURNOVER_TO_SIZE = {**{k:"Micro" for k in TURNOVER_OPTIONS[:11]}, **{"€2M–€5M":"Small","€5M–€10M":"Small",">€10M":"Medium"}}
 EMP_RANGE_TO_SIZE = {"1–5":"Micro","6–10":"Micro","10–25":"Small","26–50":"Small","51–100":"Medium","More than 100":"Medium"}
 
-# Five-band maturity model; equal per-item weight, light domain-level weighting
+# Five-band model + light weighting + standards mapping (incl. Detect)
 ANSWER_VAL = {"Yes":100, "Partially":50, "Not sure":50, "No":0}
 BANDS = [(0,20,"Very Low"),(21,40,"Low"),(41,60,"Moderate"),(61,80,"Good"),(81,100,"Strong")]
 DOMAIN_WEIGHT = {
@@ -145,28 +127,19 @@ DOMAIN_WEIGHT = {
 }
 STD_MAP = {
   "Access & Identity": ["NIST: PR.AC","ISO: A.5/A.8"],
-  "Device & Data": ["NIST: PR.DS/PR.IP","ISO: A.8/A.12"],
+  "Device & Data": ["NIST: PR.DS · PR.IP","ISO: A.8/A.12"],
   "System & Software Updates": ["NIST: PR.IP","ISO: A.8.8/A.12.6"],
-  "Incident Preparedness": ["NIST: DE/RS/RC","ISO: A.5.24/A.5.25"],   # includes Detect (DE)
-  "Vendor & Cloud": ["NIST: ID.SC/PR.AT","ISO: A.5.19/A.5.20"],
+  "Incident Preparedness": ["NIST: DE · RS · RC","ISO: A.5.24/A.5.25"],
+  "Vendor & Cloud": ["NIST: ID.SC · PR.AT","ISO: A.5.19/A.5.20"],
   "Governance": ["NIST: ID.GV","ISO: A.5 (org controls)"],
-  "Awareness & AI Risk": ["NIST: PR.AT/DE","ISO: A.6.3 (awareness)"]  # includes Detect (DE)
-}
-WHY_MATTERS = {
-  "Governance":"Clear ownership and simple records prevent gaps and speed decisions during incidents.",
-  "Access & Identity":"Strong authentication and least privilege block common takeovers (phishing, reuse).",
-  "Device & Data":"Encrypted, backed-up devices turn disasters into hiccups and reduce breach impact.",
-  "System & Software Updates":"Patching closes known holes attackers routinely scan for.",
-  "Incident Preparedness":"Practised reporting and roles cut downtime and limit spread.",
-  "Vendor & Cloud":"Knowing who holds your data and access reduces third-party blast radius.",
-  "Awareness & AI Risk":"AI-polished scams look real; recognition and backchannels stop costly mistakes."
+  "Awareness & AI Risk": ["NIST: PR.AT · ID.BE","ISO: A.6.3 (awareness)"]
 }
 
 # ─────────────────────────────────────────────────────────────
-# State (start at Landing page; no default pre-selections)
+# State
 # ─────────────────────────────────────────────────────────────
 defaults = dict(
-    page="Home",  # Landing page first
+    page="Landing",
     email_for_report="", person_name="", company_name="",
     sector_label=INDUSTRY_OPTIONS[0], sector_other="", years_in_business=YEARS_OPTIONS[0],
     employee_range=EMPLOYEE_RANGES[0], turnover_label=TURNOVER_OPTIONS[0],
@@ -184,20 +157,14 @@ for k, v in defaults.items():
 # ─────────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────────
-def progress(step:int, total:int=5, label:str=""):
-    """Progress used only for Steps 1–5 (Landing page excluded)."""
-    pct = max(0, min(step, total)) / total
-    st.progress(pct, text=label or f"Step {step} of {total}")
-
-def radio_none(label:str, options:List[str], *, key:str, horizontal:bool=True, help:Optional[str]=None, placeholder: str = "— select —"):
-    """Radio with a placeholder so nothing is preselected."""
+def radio_none(label:str, options:List[str], *, key:str, horizontal:bool=True, placeholder: str = "— select —"):
     ui_key = f"{key}__ui"
     ui_options = [placeholder] + list(options)
     current = st.session_state.get(key, "")
     idx = 0
     if current in options:
         idx = 1 + options.index(current)
-    selected_ui = st.radio(label, ui_options, index=idx, key=ui_key, horizontal=horizontal, help=help)
+    selected_ui = st.radio(label, ui_options, index=idx, key=ui_key, horizontal=horizontal)
     real_val = "" if selected_ui == placeholder else selected_ui
     st.session_state[key] = real_val
     return real_val
@@ -227,73 +194,82 @@ def area_rag():
     else: net=("⚪ Unknown","")
     return sys,ppl,net
 
-def section(title_id, questions):
+def section(title_id, questions): 
     return {"id":title_id, "title":title_id, "questions":questions}
 
 # ─────────────────────────────────────────────────────────────
-# Question bank (embedded, single file; equal per-item weights)
+# Question bank (inline)
 # ─────────────────────────────────────────────────────────────
 SECTION_3 = section("Access & Identity", [
-    {"id":"ai_pw","t":"🔑 Are strong passwords required for all accounts?","h":"Use a password manager; 10–12+ chars per account."},
-    {"id":"ai_mfa","t":"🛡️ Is Multi-Factor Authentication (MFA) enabled for key accounts?","h":"Start with email, admin and finance; prefer app or security key over SMS."},
-    {"id":"ai_admin","t":"🧰 Are admin rights limited to only those who need them?","h":"Grant temporarily; review quarterly; monitor unusual admin sign-ins."},
-    {"id":"ai_shared","t":"👥 Are shared accounts avoided or controlled?","h":"Prefer named accounts; if shared, rotate passwords, enable MFA, and log usage."},
-    {"id":"ai_leavers","t":"🚪 Are old or unused accounts removed promptly?","h":"Disable the same day a person leaves; reclaim devices and keys."},
+    {"id":"ai_pw","t":"🔑 Are strong passwords required for all accounts?"},
+    {"id":"ai_mfa","t":"🛡️ Is Multi-Factor Authentication (MFA) enabled for key accounts?"},
+    {"id":"ai_admin","t":"🧰 Are admin rights limited to only those who need them?"},
+    {"id":"ai_shared","t":"👥 Are shared accounts avoided or controlled?"},
+    {"id":"ai_leavers","t":"🚪 Are old or unused accounts removed promptly?"},
 ])
 SECTION_4 = section("Device & Data", [
-    {"id":"dd_lock","t":"🔒 Are all devices protected with a password or PIN?","h":"Turn on auto-lock ≤10 minutes and ‘find my device’."},
-    {"id":"dd_fde","t":"💽 Is full-disk encryption enabled on laptops and mobiles?","h":"Use BitLocker, FileVault, or built-in Android/iOS encryption."},
-    {"id":"dd_edr","t":"🧿 Is reputable antivirus/EDR installed and active on all devices?","h":"Stops malware and flags risky behaviour (e.g., MS Defender)."},
-    {"id":"dd_backup","t":"📦 Are important business files backed up regularly?","h":"Follow 3-2-1: 3 copies, 2 media, 1 offsite."},
-    {"id":"dd_restore","t":"🧪 Are backups tested so you know restore works?","h":"Try restoring one file/VM quarterly."},
-    {"id":"dd_usb","t":"🧰 Are staff trained to handle suspicious files/USBs?","h":"Default-deny where possible; preview links before clicking."},
-    {"id":"dd_wifi","t":"📶 Are company devices separated from personal on Wi-Fi?","h":"Guest vs. corporate networks reduce lateral movement."},
+    {"id":"dd_lock","t":"🔒 Are all devices protected with a password or PIN?"},
+    {"id":"dd_fde","t":"💽 Is full-disk encryption enabled on laptops and mobiles?"},
+    {"id":"dd_edr","t":"🧿 Is reputable antivirus/EDR installed and active on all devices?"},
+    {"id":"dd_backup","t":"📦 Are important business files backed up regularly?"},
+    {"id":"dd_restore","t":"🧪 Are backups tested so you know restore works?"},
+    {"id":"dd_usb","t":"🧰 Are staff trained to handle suspicious files/USBs?"},
+    {"id":"dd_wifi","t":"📶 Are company devices separated from personal on Wi-Fi?"},
 ])
 SECTION_5 = section("System & Software Updates", [
-    {"id":"su_os_auto","t":"♻️ Are operating systems kept up to date automatically?","h":"Turn on auto-update; MDM helps enforce it."},
-    {"id":"su_apps","t":"🧩 Are business apps updated regularly?","h":"Prefer auto-update channels."},
-    {"id":"su_unsupported","t":"⛔ Any devices running unsupported/outdated systems?","h":"Replace/upgrade or isolate them until replaced."},
-    {"id":"su_review","t":"🗓️ Do you have a monthly reminder to review updates?","h":"A 10-minute monthly check catches stragglers."},
+    {"id":"su_os_auto","t":"♻️ Are operating systems kept up to date automatically?"},
+    {"id":"su_apps","t":"🧩 Are business apps updated regularly?"},
+    {"id":"su_unsupported","t":"⛔ Any devices running unsupported/outdated systems?"},
+    {"id":"su_review","t":"🗓️ Do you have a monthly reminder to review updates?"},
 ])
 SECTION_6 = section("Incident Preparedness", [
-    {"id":"ip_report","t":"📣 Do employees know how to report incidents or suspicious activity?","h":"Provide a phishing mailbox or service desk route; make it obvious."},
-    {"id":"ip_plan","t":"📝 Do you have a simple incident response plan?","h":"One page: who to call, what to collect, who to notify, decision maker."},
-    {"id":"ip_log","t":"🧾 Are incident details recorded when they occur?","h":"Capture what/when/who/impact; notes enable learning and proof."},
-    {"id":"ip_contacts","t":"📇 Are key contacts known for emergencies?","h":"Internal IT/MSP, cyber insurer, legal, data-protection contact."},
-    {"id":"ip_test","t":"🎯 Have you tested or simulated a cyber incident?","h":"A 30-minute tabletop twice a year reveals gaps cheaply."},
+    {"id":"ip_report","t":"📣 Do employees know how to report incidents or suspicious activity?"},
+    {"id":"ip_plan","t":"📝 Do you have a simple incident response plan?"},
+    {"id":"ip_log","t":"🧾 Are incident details recorded when they occur?"},
+    {"id":"ip_contacts","t":"📇 Are key contacts known for emergencies?"},
+    {"id":"ip_test","t":"🎯 Have you tested or simulated a cyber incident?"},
 ])
 SECTION_7 = section("Vendor & Cloud", [
-    {"id":"vc_cloud","t":"☁️ Do you use cloud tools to store company data?","h":"Know where data lives and who can access it."},
-    {"id":"vc_mfa","t":"🔐 Are cloud accounts protected with MFA and strong passwords?","h":"Enforce tenant-wide MFA; require it for all admins."},
-    {"id":"vc_review","t":"🔎 Do you review how vendors protect your data?","h":"Check DPAs, security whitepapers and certifications (ISO 27001, SOC 2)."},
-    {"id":"vc_access","t":"📜 Do you track which suppliers have access to systems/data?","h":"List integrations and permissions; remove unused ones."},
-    {"id":"vc_notify","t":"🚨 Will vendors notify you promptly if they have a breach?","h":"Ensure breach-notification clauses and contacts exist."},
+    {"id":"vc_cloud","t":"☁️ Do you use cloud tools to store company data?"},
+    {"id":"vc_mfa","t":"🔐 Are cloud accounts protected with MFA and strong passwords?"},
+    {"id":"vc_review","t":"🔎 Do you review how vendors protect your data?"},
+    {"id":"vc_access","t":"📜 Do you track which suppliers have access to systems/data?"},
+    {"id":"vc_notify","t":"🚨 Will vendors notify you promptly if they have a breach?"},
 ])
 SECTION_9 = section("Governance", [
-    {"id":"gov_policy","t":"📘 Do you have a short, written security policy approved by leadership?","h":"A page or two: passwords, MFA, updates, incident steps, data handling."},
-    {"id":"gov_roles","t":"🧭 Are responsibilities clear (who owns what)?","h":"Name an internal owner or MSP; list backups and escalation paths."},
-    {"id":"gov_risk","t":"🧮 Do you review key risks at least once a year?","h":"Simple register: likelihood × impact for top 3–5 items."},
-    {"id":"gov_training","t":"🎓 Is basic security training mandatory for all staff?","h":"New starters + annual refresh; track completion."},
-    {"id":"gov_records","t":"🗂️ Do you keep basic records (assets, vendors, incidents, backups)?","h":"A shared sheet is fine; the point is visibility and review."},
+    {"id":"gov_policy","t":"📘 Do you have a short, written security policy approved by leadership?"},
+    {"id":"gov_roles","t":"🧭 Are responsibilities clear (who owns what)?"},
+    {"id":"gov_risk","t":"🧮 Do you review key risks at least once a year?"},
+    {"id":"gov_training","t":"🎓 Is basic security training mandatory for all staff?"},
+    {"id":"gov_records","t":"🗂️ Do you keep basic records (assets, vendors, incidents, backups)?"},
 ])
 SECTION_AI = section("Awareness & AI Risk", [
-    {"id":"ai_phish","t":"🎣 Do staff practise spotting phish/vish/smishing at least quarterly?","h":"Little-and-often beats annual training; rehearse reporting."},
-    {"id":"ai_deepfake","t":"🎭 Are deepfake/voice-clone risks covered in training?","h":"Agree a verification backchannel for high-risk requests."},
-    {"id":"ai_reporting","t":"📮 Is there a simple way to report suspicious messages?","h":"Mailbox (phish@) or ‘report phish’ button; track usage."},
-    {"id":"ai_awareness","t":"🧠 Are AI-generated content risks explained in plain language?","h":"Polished language ≠ trusted request; verify sender/route."},
-    {"id":"ai_metrics","t":"📊 Do you review basic awareness metrics?","h":"Completion, reporting rate, time-to-report help tune effort."},
+    {"id":"ai_phish","t":"🎣 Do staff practise spotting phish/vish/smishing at least quarterly?"},
+    {"id":"ai_deepfake","t":"🎭 Are deepfake/voice-clone risks covered in training?"},
+    {"id":"ai_reporting","t":"📮 Is there a simple way to report suspicious messages?"},
+    {"id":"ai_awareness","t":"🧠 Are AI-generated content risks explained in plain language?"},
+    {"id":"ai_metrics","t":"📊 Do you review basic awareness metrics?"},
 ])
 
 ALL_SECTIONS = [SECTION_3, SECTION_4, SECTION_5, SECTION_6, SECTION_7, SECTION_9, SECTION_AI]
 
+WHY_MATTERS = {
+    "Access & Identity": "Identity is the blast radius. Strong passwords + MFA + least privilege stop most takeovers.",
+    "Device & Data": "Lost or infected devices cause data loss. Encryption, EDR, and tested backups reduce impact.",
+    "System & Software Updates": "Most incidents exploit known bugs. Patching and removing unsupported systems closes doors.",
+    "Incident Preparedness": "Fast detection (DE), response (RS) and recovery (RC) limit damage when—not if—something happens.",
+    "Vendor & Cloud": "Third parties expand your attack surface. Know who has access, enforce MFA, and require breach notice.",
+    "Governance": "Clear ownership, simple policy, and records keep security moving when people are busy.",
+    "Awareness & AI Risk": "AI polishes deception. Regular practice and easy reporting build the habits that catch fakes."
+}
+
 # ─────────────────────────────────────────────────────────────
-# Scoring (equal per-item weights; light domain-level weighting)
+# Scoring
 # ─────────────────────────────────────────────────────────────
 def section_score_pct(sec:Dict)->float:
     vals=[st.session_state.get(q["id"],"") for q in sec["questions"]]
     if not vals: return 0.0
-    # Equal per-item weights in v1 (Yes=100, Partially/Not sure=50, No=0)
-    return round(sum(ANSWER_VAL.get(v,50) for v in vals)/len(vals), 2)
+    return round(sum(ANSWER_VAL.get(v,50) for v in vals)/len(vals),2)
 
 def section_light_from_pct(pct:float)->Tuple[str,str,str]:
     if pct >= 70: return ("🟢","Low","green")
@@ -339,23 +315,18 @@ def build_markdown_summary()->str:
     lines.append("")
     lines.append(f"## Overall maturity: **{overall_pct}% · {band}**")
     lines.append("")
-    lines.append("## At-a-glance")
-    lines.append(f"- Systems & devices: {sys[0]}")
-    lines.append(f"- People & access: {ppl[0]}")
-    lines.append(f"- Online exposure: {net[0]}")
+    lines.append("## Section scores (0–100) and tags")
+    for sid in [s["id"] for s in ALL_SECTIONS]:
+        pct = st.session_state.get("detailed_scores_pct", {}).get(sid, None)
+        if pct is None: continue
+        emoji,label,_ = section_light_from_pct(pct)
+        tags = " · ".join(STD_MAP.get(sid, []))
+        lines.append(f"- {sid}: {emoji} {label} — {pct}%  ({tags})")
     lines.append("")
-    if st.session_state.get("detailed_scores_pct"):
-        lines.append("## Section scores (0–100) and tags")
-        for sid, pct in st.session_state["detailed_scores_pct"].items():
-            emoji,label,_ = section_light_from_pct(pct)
-            tags = " · ".join(STD_MAP.get(sid, []))
-            lines.append(f"- {sid}: {emoji} {label} — {pct}%  ({tags})")
-        lines.append("")
     return "\n".join(lines)
 
 def build_csv()->bytes:
-    rows=[]
-    rows.append(["Field","Value"])
+    rows=[["Field","Value"]]
     basics = {
         "Business": st.session_state.company_name,
         "Region": st.session_state.business_region,
@@ -393,138 +364,128 @@ def build_csv()->bytes:
     return out.getvalue().encode("utf-8")
 
 # ─────────────────────────────────────────────────────────────
-# UI — Landing Page (Home)
+# UI — Landing
 # ─────────────────────────────────────────────────────────────
-if st.session_state.page == "Home":
-    c1, c2 = st.columns([1.1, 1.9], gap="large")
+if st.session_state.page == "Landing":
+    brand_header()
+    progress_for("Landing")
+    st.markdown("### Welcome")
+    st.markdown("This tool gives SMEs a fast, plain-language view of security posture across seven domains "
+                "— including **Awareness & AI Risk** — and suggests practical next steps.")
+    c1,c2 = st.columns([1,1])
     with c1:
-        st.markdown('<div class="sticky">', unsafe_allow_html=True)
-        st.markdown("### Why this tool?")
-        st.markdown("""
-- See your **human-factor** cyber posture in minutes  
-- Explore **safe simulations** of social-engineering patterns  
-- Get **clear next steps** mapped to familiar practice (ISO/NIST)
-        """)
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("#### What you’ll do")
+        st.markdown("- Add a few business basics\n- Answer quick checks\n- See a traffic-light dashboard\n- Export a summary")
     with c2:
-        st.markdown('<div class="landing-wrap">', unsafe_allow_html=True)
-        st.markdown('<div class="landing-title">Social Engineering Attack Simulation & Self-Assessment Framework for SMEs</div>', unsafe_allow_html=True)
-        st.markdown('<div class="landing-sub">A lightweight, transparent way to assess maturity and prioritise improvements.</div>', unsafe_allow_html=True)
-        st.markdown('<div class="lead">Runs locally or via Streamlit Cloud. No personal data is stored or transmitted.</div>', unsafe_allow_html=True)
-        st.markdown("**How it works**", unsafe_allow_html=True)
-        st.markdown("""
-1. Tell us about the business  
-2. Capture your operational context  
-3. Answer nine quick baseline questions  
-4. See a summary and explore safe simulations  
-5. Complete the detailed assessment for per-domain scores
-        """)
-        st.button("Start Assessment ➜", type="primary", use_container_width=True,
-                  on_click=lambda: st.session_state.update({"page":"Step 1"}))
-        st.markdown('<div class="footer-note">Version 1.0 · Last updated: October 2025</div>', unsafe_allow_html=True)
+        st.markdown("#### What we don’t do")
+        st.markdown("- No data is stored\n- No live phishing\n- No personal information needed")
+    st.button("Start ➜", type="primary", on_click=lambda: st.session_state.update({"page":"Business basics"}))
 
 # ─────────────────────────────────────────────────────────────
-# UI — Step 1 (Business basics)
+# UI — Step 1 (Business basics) — dense layout
 # ─────────────────────────────────────────────────────────────
-if st.session_state.page == "Step 1":
-    progress(1, total=5, label="Business basics")
+if st.session_state.page == "Business basics":
+    brand_header()
+    progress_for("Business basics")
     st.markdown("## 🧭 Tell us about the business")
     st.caption("Just the essentials — this sets context for the recommendations.")
+    st.markdown('<div class="dense">', unsafe_allow_html=True)
 
-    snap, form = st.columns([1, 2], gap="large")
+    snap, colA, colB = st.columns([0.9, 1.1, 1.1], gap="large")
     with snap:
         st.markdown('<div class="sticky">', unsafe_allow_html=True)
         st.markdown("#### 📸 Snapshot")
         st.markdown(
-            f"<div class='card'><b>Business:</b> {st.session_state.company_name or '—'}<br>"
-            f"<b>Region:</b> {st.session_state.business_region}<br>"
-            f"<b>Industry:</b> {resolved_industry()}<br>"
-            f"<b>People:</b> {st.session_state.employee_range} · <b>Years:</b> {st.session_state.years_in_business}<br>"
-            f"<b>Turnover:</b> {st.session_state.turnover_label}<br>"
-            f"<b>Work mode:</b> {st.session_state.work_mode or '—'}<br>"
-            f"<b>Size (derived):</b> {org_size()}</div>", unsafe_allow_html=True
+            f"<div class='card snapshot'><p><b>Business</b>: {st.session_state.company_name or '—'} · "
+            f"<b>Region</b>: {st.session_state.business_region}</p>"
+            f"<p><b>Industry</b>: {resolved_industry()}</p>"
+            f"<p><b>People</b>: {st.session_state.employee_range} · "
+            f"<b>Years</b>: {st.session_state.years_in_business}</p>"
+            f"<p><b>Turnover</b>: {st.session_state.turnover_label}</p>"
+            f"<p><b>Work mode</b>: {st.session_state.work_mode or '—'} · "
+            f"<b>Size</b>: {org_size()}</p></div>", unsafe_allow_html=True
         )
         st.markdown('</div>', unsafe_allow_html=True)
 
-    with form:
+    with colA:
         st.markdown("#### 👤 About you")
-        st.session_state.email_for_report = st.text_input("📧 Email for report (optional, for sending later)", value=st.session_state.email_for_report)
+        st.session_state.email_for_report = st.text_input(
+            "📧 Email for report (optional, for sending later)", value=st.session_state.email_for_report)
         st.session_state.person_name = st.text_input("Your name *", value=st.session_state.person_name)
 
+    with colB:
         st.markdown("#### 🏢 About the business")
         st.session_state.company_name = st.text_input("Business name *", value=st.session_state.company_name)
-
         c1, c2 = st.columns(2)
         with c1:
-            st.session_state.business_region = st.selectbox("🌍 Business location / region *", REGION_OPTIONS, index=REGION_OPTIONS.index(st.session_state.business_region))
-            st.session_state.sector_label = st.selectbox("🏷️ Industry / service *", INDUSTRY_OPTIONS,
-                index=INDUSTRY_OPTIONS.index(st.session_state.sector_label) if st.session_state.sector_label in INDUSTRY_OPTIONS else 0)
-            if st.session_state.sector_label == "Other (type below)":
-                st.session_state.sector_other = st.text_input("✍️ Type your industry *", value=st.session_state.sector_other)
-            else:
-                st.session_state.sector_other = ""
-            st.session_state.years_in_business = st.selectbox("📅 How long in business? *", YEARS_OPTIONS,
-                index=YEARS_OPTIONS.index(st.session_state.years_in_business))
+            st.session_state.business_region = st.selectbox("🌍 Business location / region *",
+                REGIONS:=REGION_OPTIONS, index=REGION_OPTIONS.index(st.session_state.business_region))
+            st.session_state.years_in_business = st.selectbox("📅 How long in business? *",
+                YEARS_OPTIONS, index=YEARS_OPTIONS.index(st.session_state.years_in_business))
         with c2:
-            st.session_state.employee_range = st.selectbox("👥 People (incl. contractors) *", EMPLOYEE_RANGES,
-                index=EMPLOYEE_RANGES.index(st.session_state.employee_range))
-            st.session_state.turnover_label = st.selectbox("💶 Approx. annual turnover *", TURNOVER_OPTIONS,
-                index=TURNOVER_OPTIONS.index(st.session_state.turnover_label))
+            st.session_state.employee_range = st.selectbox("👥 People (incl. contractors) *",
+                EMPLOYEE_RANGES, index=EMPLOYEE_RANGES.index(st.session_state.employee_range))
+            st.session_state.turnover_label = st.selectbox("💶 Approx. annual turnover *",
+                TURNOVER_OPTIONS, index=TURNOVER_OPTIONS.index(st.session_state.turnover_label))
 
-        radio_none("🧭 Work mode *", WORK_MODE, key="work_mode", horizontal=True,
-                   help="Where most work happens — influences risk and recommendations.")
+        st.session_state.sector_label = st.selectbox("🏷️ Industry / service *", INDUSTRY_OPTIONS,
+            index=INDUSTRY_OPTIONS.index(st.session_state.sector_label) if st.session_state.sector_label in INDUSTRY_OPTIONS else 0)
+        if st.session_state.sector_label == "Other (type below)":
+            st.session_state.sector_other = st.text_input("✍️ Type your industry *", value=st.session_state.sector_other)
+        else:
+            st.session_state.sector_other = ""
 
-        missing=[]
-        if not st.session_state.person_name.strip(): missing.append("name")
-        if not st.session_state.company_name.strip(): missing.append("company")
-        if st.session_state.sector_label=="Other (type below)" and not st.session_state.sector_other.strip():
-            missing.append("industry")
-        if not st.session_state.work_mode: missing.append("work mode")
+        radio_none("🧭 Work mode *", WORK_MODE, key="work_mode", horizontal=True)
+        st.caption("One word on *why it matters*: work mode shifts your device and access risks.")
 
-        cA, cB = st.columns(2)
-        with cA:
-            st.button("⬅ Back to Landing", on_click=lambda: st.session_state.update({"page":"Home"}))
-        with cB:
-            st.button("Continue ➜", type="primary", disabled=len(missing)>0,
-                      on_click=lambda: st.session_state.update({"page":"Step 2"}))
+    # Navigation
+    missing=[]
+    if not st.session_state.person_name.strip(): missing.append("name")
+    if not st.session_state.company_name.strip(): missing.append("company")
+    if st.session_state.sector_label=="Other (type below)" and not st.session_state.sector_other.strip():
+        missing.append("industry")
+    if not st.session_state.work_mode: missing.append("work mode")
+
+    cA, cB = st.columns(2)
+    with cA:
+        st.button("Back to Landing", on_click=lambda: st.session_state.update({"page":"Landing"}))
+    with cB:
+        st.button("Continue ➜", type="primary", disabled=len(missing)>0,
+                  on_click=lambda: st.session_state.update({"page":"Operational context"}))
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────
-# UI — Step 2 (Operational context — mandatory)
+# UI — Step 2 (Operational context)
 # ─────────────────────────────────────────────────────────────
-if st.session_state.page == "Step 2":
-    progress(2, total=5, label="Operational context")
+if st.session_state.page == "Operational context":
+    brand_header()
+    progress_for("Operational context")
     st.markdown("## 🧱 Operational context")
-    st.caption("This step captures your core systems and data flows — required to tailor the guidance.")
+    st.caption("Your core systems and data flows — required to tailor the guidance.")
 
     cA, cB = st.columns(2)
     with cA:
         st.session_state.critical_systems = st.multiselect("🧩 Critical systems in use *",
-            CRITICAL_SYSTEMS, default=st.session_state.critical_systems,
-            help="Include collaboration/email (M365 / Google), identity (Entra ID/Okta), business platforms (ERP/CRM/PoS).")
+            CRITICAL_SYSTEMS, default=st.session_state.critical_systems)
         if "Other (type below)" in st.session_state.critical_systems:
             st.session_state.critical_systems_other = st.text_input("✍️ Specify other system", value=st.session_state.critical_systems_other)
         st.session_state.primary_work_env = st.radio("🏗️ Primary work environment *", WORK_ENVIRONMENTS,
-            horizontal=True, index=WORK_ENVIRONMENTS.index(st.session_state.primary_work_env),
-            help="Where your key apps and files mainly live.")
+            horizontal=True, index=WORK_ENVIRONMENTS.index(st.session_state.primary_work_env))
         st.session_state.remote_ratio = st.radio("🏡 Remote work ratio *", REMOTE_RATIO,
-            horizontal=True, index=REMOTE_RATIO.index(st.session_state.remote_ratio),
-            help="Helps gauge device and access risks.")
+            horizontal=True, index=REMOTE_RATIO.index(st.session_state.remote_ratio))
     with cB:
         st.session_state.data_types = st.multiselect("🔍 Types of personal data handled *",
-            DATA_TYPES, default=st.session_state.data_types,
-            help="Tick all that apply. Sensitive data calls for stronger controls.")
+            DATA_TYPES, default=st.session_state.data_types)
         st.session_state.cross_border = st.radio("🌐 Cross-border data flows *", CROSS_BORDER, horizontal=True,
-                                                 index=CROSS_BORDER.index(st.session_state.cross_border),
-                                                 help="Do you transfer or store data outside the EU/UK?")
+                                                 index=CROSS_BORDER.index(st.session_state.cross_border))
         st.session_state.certifications = st.multiselect("🔒 Certifications / schemes",
-                                                          CERTIFICATION_OPTIONS, default=st.session_state.certifications,
-                                                          help="Any frameworks you align with or are pursuing.")
+                                                          CERTIFICATION_OPTIONS, default=st.session_state.certifications)
         if "Other (type below)" in st.session_state.certifications:
             st.session_state.certifications_other = st.text_input("✍️ Specify other scheme", value=st.session_state.certifications_other)
 
     radio_none("💳 Do you accept or process card payments (online or in-store)? *",
-               ["Yes","No","Not sure"], key="bp_card_payments", horizontal=True,
-               help="PCI DSS responsibilities vary by setup (gateway vs PoS vs e-commerce).")
+               ["Yes","No","Not sure"], key="bp_card_payments", horizontal=True)
+    st.caption("Why it matters: payment flows may add **PCI DSS** responsibilities.")
 
     missing=[]
     if not st.session_state.critical_systems: missing.append("critical systems")
@@ -533,30 +494,32 @@ if st.session_state.page == "Step 2":
 
     cA, cB = st.columns(2)
     with cA:
-        st.button("⬅ Back to Step 1", on_click=lambda: st.session_state.update({"page":"Step 1"}))
+        st.button("⬅ Back to Step 1", on_click=lambda: st.session_state.update({"page":"Business basics"}))
     with cB:
         st.button("Continue ➜", type="primary", disabled=len(missing)>0,
-                  on_click=lambda: st.session_state.update({"page":"Step 3"}))
+                  on_click=lambda: st.session_state.update({"page":"Your current practices"}))
 
 # ─────────────────────────────────────────────────────────────
-# UI — Step 3 (Baseline Q1–Q9)
+# UI — Step 3 (Baseline Q1–Q9) — dense layout
 # ─────────────────────────────────────────────────────────────
-if st.session_state.page == "Step 3":
-    progress(3, total=5, label="Your current practices")
+if st.session_state.page == "Your current practices":
+    brand_header()
+    progress_for("Your current practices")
     st.markdown("## 🧪 Your current practices")
-    st.caption("Nine quick checks. Each hint explains the ‘why’ so the action is clear.")
 
-    snap, body, prev = st.columns([1, 1.7, 1], gap="large")
+    snap, body, prev = st.columns([0.9, 1.2, 0.9], gap="large")
     with snap:
         st.markdown('<div class="sticky">', unsafe_allow_html=True)
         st.markdown("#### 📸 Snapshot")
         st.markdown(
-            f"<div class='card'><b>Business:</b> {st.session_state.company_name}<br>"
-            f"<b>Region:</b> {st.session_state.business_region}<br>"
-            f"<b>Industry:</b> {resolved_industry()}<br>"
-            f"<b>People:</b> {st.session_state.employee_range} · <b>Years:</b> {st.session_state.years_in_business}<br>"
-            f"<b>Turnover:</b> {st.session_state.turnover_label} · <b>Size:</b> {org_size()}<br>"
-            f"<b>Work mode:</b> {st.session_state.work_mode}</div>", unsafe_allow_html=True
+            f"<div class='card snapshot'><p><b>Business</b>: {st.session_state.company_name}</p>"
+            f"<p><b>Region</b>: {st.session_state.business_region} · "
+            f"<b>Industry</b>: {resolved_industry()}</p>"
+            f"<p><b>People</b>: {st.session_state.employee_range} · "
+            f"<b>Years</b>: {st.session_state.years_in_business} · "
+            f"<b>Turnover</b>: {st.session_state.turnover_label}</p>"
+            f"<p><b>Work mode</b>: {st.session_state.work_mode} · <b>Size</b>: {org_size()}</p></div>",
+            unsafe_allow_html=True
         )
         sys,ppl,net = area_rag()
         st.markdown("#### 🔎 At-a-glance")
@@ -571,61 +534,56 @@ if st.session_state.page == "Step 3":
         with tab1:
             radio_none("**Q1. 🧑‍💻 Who looks after your IT day-to-day?**",
                        ["Self-managed","Outsourced IT","Shared responsibility","Not sure"],
-                       key="bp_it_manager", horizontal=True,
-                       help="Clear ownership prevents gaps. Even a simple rota with an MSP works.")
-            st.markdown('<div class="hint">Includes laptops/phones, Wi-Fi, email, website, point-of-sale, cloud apps, file storage/backup.</div>', unsafe_allow_html=True)
+                       key="bp_it_manager", horizontal=True)
+            st.markdown('<div class="hint">Clear ownership prevents gaps — even a simple rota with an MSP works.</div>', unsafe_allow_html=True)
 
             radio_none("**Q2. 📋 Do you keep a simple list of company devices (laptops, phones, servers)?**",
-                       ["Yes","Partially","No","Not sure"], key="bp_inventory", horizontal=True,
-                       help="Asset lists help you patch, insure and recover quickly.")
-            st.markdown('<div class="hint">Keep model/owner/OS/update status. A shared sheet is fine to start.</div>', unsafe_allow_html=True)
+                       ["Yes","Partially","No","Not sure"], key="bp_inventory", horizontal=True)
+            st.markdown('<div class="hint">Asset lists help you patch, insure and recover quickly.</div>', unsafe_allow_html=True)
 
             radio_none("**Q3. 📱 Do people use personal devices for work (Bring Your Own Device)?**",
-                       ["Yes","Sometimes","No","Not sure"], key="bp_byod", horizontal=True,
-                       help="Personal devices need minimum rules (screen lock, updates, disk encryption).")
-            st.markdown('<div class="hint">Example: checking work email on a personal phone or laptop.</div>', unsafe_allow_html=True)
+                       ["Yes","Sometimes","No","Not sure"], key="bp_byod", horizontal=True)
+            st.markdown('<div class="hint">Personal devices need minimum rules: screen lock, updates, disk encryption.</div>', unsafe_allow_html=True)
 
             radio_none("**Q4. 🔐 Do you handle sensitive customer or financial data?**",
-                       ["Yes","No","Not sure"], key="bp_sensitive", horizontal=True,
-                       help="Handling PII, finance or health data raises the bar for controls.")
-            st.markdown('<div class="hint">Think payment details, personal records, signed contracts, health records.</div>', unsafe_allow_html=True)
+                       ["Yes","No","Not sure"], key="bp_sensitive", horizontal=True)
+            st.markdown('<div class="hint">Handling PII, finance or health data raises the bar for controls.</div>', unsafe_allow_html=True)
 
         with tab2:
             radio_none("**Q5. 🕸️ Do you have a public website?**",
-                       ["Yes","No"], key="df_website", horizontal=True,
-                       help="Web presence increases attack surface and brand risk.")
+                       ["Yes","No"], key="df_website", horizontal=True)
+            st.markdown('<div class="hint">Web presence increases attack surface and brand risk.</div>', unsafe_allow_html=True)
+
             radio_none("**Q6. 🔒 Is your website HTTPS (padlock in the browser)?**",
-                       ["Yes","Partially","No","Not sure"], key="df_https", horizontal=True,
-                       help="HTTPS protects visitors and is a trust signal. Many hosts enable it for free.")
+                       ["Yes","Partially","No","Not sure"], key="df_https", horizontal=True)
             st.markdown('<div class="hint">Redirect HTTP→HTTPS and renew certificates automatically.</div>', unsafe_allow_html=True)
 
             radio_none("**Q7. ✉️ Do you use business email addresses?**",
-                       ["Yes","Partially","No"], key="df_email", horizontal=True,
-                       help="Custom domains + MFA improve deliverability and security.")
-            st.markdown('<div class="hint">Personal mailboxes are hard to secure and easy to spoof.</div>', unsafe_allow_html=True)
+                       ["Yes","Partially","No"], key="df_email", horizontal=True)
+            st.markdown('<div class="hint">Custom domains + MFA improve deliverability and security.</div>', unsafe_allow_html=True)
 
             radio_none("**Q8. 📣 Is your business active on social media?**",
-                       ["Yes","No"], key="df_social", horizontal=True,
-                       help="Social accounts are common takeover targets — use strong passwords & MFA.")
+                       ["Yes","No"], key="df_social", horizontal=True)
+            st.markdown('<div class="hint">Social accounts are common takeover targets — use strong passwords & MFA.</div>', unsafe_allow_html=True)
 
             radio_none("**Q9. 🔎 Do you regularly check what’s public about the company or staff online?**",
-                       ["Yes","Sometimes","No"], key="df_review", horizontal=True,
-                       help="Periodic checks help catch exposed credentials or oversharing.")
-            st.markdown('<div class="hint">Search engines, company profiles, staff bios, screenshots can reveal systems.</div>', unsafe_allow_html=True)
+                       ["Yes","Sometimes","No"], key="df_review", horizontal=True)
+            st.markdown('<div class="hint">Periodic checks help catch exposed credentials or oversharing.</div>', unsafe_allow_html=True)
 
     with prev:
         st.write(""); st.write("")
-        st.button("⬅ Back to Step 2", on_click=lambda: st.session_state.update({"page":"Step 2"}))
+        st.button("⬅ Back to Step 2", on_click=lambda: st.session_state.update({"page":"Operational context"}))
         required = ["bp_it_manager","bp_inventory","bp_byod","bp_sensitive","df_website","df_https","df_email","df_social","df_review"]
         missing=[k for k in required if not st.session_state.get(k)]
         st.button("Finish Initial Assessment ➜", type="primary", disabled=len(missing)>0,
-                  on_click=lambda: st.session_state.update({"page":"Step 4"}))
+                  on_click=lambda: st.session_state.update({"page":"Summary"}))
 
 # ─────────────────────────────────────────────────────────────
-# UI — Step 4 (Summary + Simulations)
+# UI — Step 4 (Summary) — simulations removed
 # ─────────────────────────────────────────────────────────────
-if st.session_state.page == "Step 4":
-    progress(4, total=5, label="Summary & Simulations")
+if st.session_state.page == "Summary":
+    brand_header()
+    progress_for("Summary")
     st.markdown("## 📊 Initial Assessment Summary")
     over_txt, over_class, over_msg = area_rag_overall()
     st.markdown(f"<span class='pill {over_class}'>Overall digital dependency (heuristic): <b>{over_txt}</b></span>", unsafe_allow_html=True)
@@ -649,30 +607,16 @@ if st.session_state.page == "Step 4":
                     f"<span class='chip {ppl[1]}'>👥 People · {ppl[0]}</span>"
                     f"<span class='chip {net[1]}'>🌐 Exposure · {net[0]}</span>", unsafe_allow_html=True)
 
-    st.markdown("### 🧪 Guided simulations (safe, read-only)")
-    with st.expander("🎣 Invoice phish preview"):
-        st.write("From: “Accounts” <accounts@trusted-lookalike.com> — ‘Please review the attached invoice ASAP.’")
-        st.write("Cues: display-name spoof, urgent tone, link hover mismatch, attachment from unknown sender.")
-        st.write("Action: report via your phish route; verify invoices via a known backchannel.")
-    with st.expander("🗣️ CEO voice-clone request"):
-        st.write("Scenario: an urgent voice note asking for a payment change.")
-        st.write("Cues: urgency + authority; unfamiliar contact method; out-of-hours request.")
-        st.write("Action: verify via a known number/channel before acting.")
-    with st.expander("🔐 ‘Security alert’ login lure"):
-        st.write("Scenario: ‘Your account will be locked. Reset password now.’")
-        st.write("Cues: generic greeting; domain mismatch; push to click.")
-        st.write("Action: do not click; go to the site directly or use IT’s known route.")
-
     st.markdown("---")
     c1,c2,c3 = st.columns([1,1,2])
     with c1:
-        st.button("⬅ Back", on_click=lambda: st.session_state.update({"page":"Step 3"}))
+        st.button("⬅ Back", on_click=lambda: st.session_state.update({"page":"Your current practices"}))
     with c2:
-        st.button("Start over", on_click=lambda: [st.session_state.update(defaults), st.session_state.update({"page":"Home"})])
+        st.button("Start over", on_click=lambda: [st.session_state.update(defaults), st.session_state.update({"page":"Landing"})])
     with c3:
         st.button("Continue to detailed assessment ➜", type="primary",
                   on_click=lambda: st.session_state.update({"detailed_sections":[s["id"] for s in ALL_SECTIONS],
-                                                            "page":"Detailed"}))
+                                                            "page":"Detailed assessment"}))
 
     st.markdown("### ⬇️ Export initial summary")
     md = build_markdown_summary()
@@ -682,7 +626,9 @@ if st.session_state.page == "Step 4":
 # ─────────────────────────────────────────────────────────────
 # UI — Detailed
 # ─────────────────────────────────────────────────────────────
-if st.session_state.page == "Detailed":
+if st.session_state.page == "Detailed assessment":
+    brand_header()
+    progress_for("Detailed assessment")
     st.markdown("## 🧩 Detailed Assessment")
     tabs = st.tabs([("🔐 " if s["id"]=='Access & Identity' else
                      "💻 " if s['id']=='Device & Data' else
@@ -693,22 +639,15 @@ if st.session_state.page == "Detailed":
                      "🧠 ")+s["id"] for s in ALL_SECTIONS])
     for tab, sec in zip(tabs, ALL_SECTIONS):
         with tab:
-            st.caption({
-                "Access & Identity":"Control of user access and authentication.",
-                "Device & Data":"How well devices and company data are secured.",
-                "System & Software Updates":"Keeping systems patched and supported.",
-                "Incident Preparedness":"Readiness to detect, respond, and recover.",
-                "Vendor & Cloud":"Security of third-party tools, vendors, and SaaS.",
-                "Governance":"Leadership, policy, roles, and record-keeping.",
-                "Awareness & AI Risk":"Deception literacy, reporting, and backchannel habits."
-            }.get(sec["id"], ""))
-            for q in sec["questions"]:
-                radio_none(q["t"], ["Yes","Partially","No","Not sure"], key=q["id"], horizontal=True, help=q["h"])
-                st.markdown(f"<div class='hint'>💡 {q['h']}</div>", unsafe_allow_html=True)
+            st.caption(WHY_MATTERS.get(sec["id"], ""))
+            for q in sec["questions"]]:
+                radio_none(q["t"], ["Yes","Partially","No","Not sure"], key=q["id"], horizontal=True)
+            # show mapping tags
+            st.markdown(f"<div class='small'>Tags: {' · '.join(STD_MAP.get(sec['id'], []))}</div>", unsafe_allow_html=True)
 
     cA, cB = st.columns(2)
     with cA:
-        st.button("⬅ Back to Summary", on_click=lambda: st.session_state.update({"page":"Step 4"}))
+        st.button("⬅ Back to Summary", on_click=lambda: st.session_state.update({"page":"Summary"}))
     with cB:
         def _finish():
             scores_pct = {s["id"]: section_score_pct(s) for s in ALL_SECTIONS}
@@ -720,25 +659,22 @@ if st.session_state.page == "Detailed":
 # UI — Report (Final Dashboard)
 # ─────────────────────────────────────────────────────────────
 if st.session_state.page == "Report":
+    brand_header()
+    progress_for("Report")
     st.markdown("## 🌟 Recommendations & Section Status")
 
     scores_pct: Dict[str, float] = st.session_state.get("detailed_scores_pct", {})
-    lookup = {s["id"]: s for s in ALL_SECTIONS}
-
     if scores_pct:
         st.markdown("<div class='score-grid'>", unsafe_allow_html=True)
         for sid, pct in scores_pct.items():
             emoji,label,klass = section_light_from_pct(pct)
-            tags = " · ".join(STD_MAP.get(sid, []))
-            why = WHY_MATTERS.get(sid, "")
             html = f"""
             <div class="score-card">
               <div class="score-title">{sid}</div>
               <div class="status-pill">{emoji} <span>{label}</span></div>
-              <div style="font-size:.92rem;color:#1f2937;margin-top:.35rem">Score: {pct:.2f}/100</div>
+              <div style="font-size:.92rem;color:#475569;margin-top:.35rem">Score: {pct:.2f}/100</div>
               <div class="meter {klass}"><span style="width:{pct}%"></span></div>
-              <div style="font-size:.86rem;color:#475569;margin-top:.35rem">{tags}</div>
-              <div style="font-size:.92rem;color:#0f172a;margin-top:.45rem"><b>Why it matters:</b> {why}</div>
+              <div style="font-size:.86rem;color:#64748b;margin-top:.25rem">{' · '.join(STD_MAP.get(sid, []))}</div>
             </div>
             """
             st.markdown(html, unsafe_allow_html=True)
@@ -778,10 +714,41 @@ if st.session_state.page == "Report":
     st.markdown("### ⬇️ Export results")
     st.download_button("Download results (CSV)", data=build_csv(), file_name="cyber-assessment-results.csv", mime="text/csv")
     st.download_button("Download summary (Markdown)", data=build_markdown_summary().encode("utf-8"), file_name="cyber-assessment-summary.md", mime="text/markdown")
-    st.button("Export as PDF (coming soon)", disabled=True, help="PDF export with accessible tagging will be added in a future version.")
 
-    cA, cB = st.columns(2)
+    cA, cB, cC = st.columns(3)
     with cA:
-        st.button("⬅ Back to Detailed", on_click=lambda: st.session_state.update({"page":"Detailed"}))
+        st.button("⬅ Back to Detailed", on_click=lambda: st.session_state.update({"page":"Detailed assessment"}))
     with cB:
-        st.button("Start over", on_click=lambda: [st.session_state.update(defaults), st.session_state.update({"page":"Home"})])
+        st.button("Start over", on_click=lambda: [st.session_state.update(defaults), st.session_state.update({"page":"Landing"})])
+    with cC:
+        st.button("Go to simulations ➜", type="primary", on_click=lambda: st.session_state.update({"page":"Learn & Simulate"}))
+
+# ─────────────────────────────────────────────────────────────
+# UI — Final Step: Learn & Simulate
+# ─────────────────────────────────────────────────────────────
+if st.session_state.page == "Learn & Simulate":
+    brand_header()
+    progress_for("Learn & Simulate")
+    st.markdown("## 🧪 Learn & Simulate (safe, read-only)")
+    st.caption("Short, guided examples to reinforce recognition habits. No messages are sent; nothing is stored.")
+
+    with st.expander("🎣 Invoice phish preview"):
+        st.write("From: “Accounts” <accounts@trusted-lookalike.com> — ‘Please review the attached invoice ASAP.’")
+        st.write("Cues: display-name spoof, urgent tone, link hover mismatch, attachment from unknown sender.")
+        st.write("Action: report via your phish route; verify invoices via a known backchannel.")
+
+    with st.expander("🗣️ CEO voice-clone request"):
+        st.write("Scenario: an urgent voice note asking for a payment change.")
+        st.write("Cues: urgency + authority; unfamiliar contact method; out-of-hours request.")
+        st.write("Action: verify via a known number/channel before acting.")
+
+    with st.expander("🔐 ‘Security alert’ login lure"):
+        st.write("Scenario: ‘Your account will be locked. Reset password now.’")
+        st.write("Cues: generic greeting; domain mismatch; push to click.")
+        st.write("Action: do not click; go to the site directly or use IT’s known route.")
+
+    c1, c2 = st.columns(2)
+    with c1:
+        st.button("⬅ Back to report", on_click=lambda: st.session_state.update({"page":"Report"}))
+    with c2:
+        st.button("Start over", on_click=lambda: [st.session_state.update(defaults), st.session_state.update({"page":"Landing"})])
