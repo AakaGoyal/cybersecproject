@@ -675,56 +675,58 @@ if st.session_state.page == "Report":
 # ─────────────────────────────────────────────────────────────
 if st.session_state.page == "Simulations":
 
-    # Simple styles for the fake message + feedback panels
+    # Subtle styling and emoji-friendly look
     st.markdown("""
     <style>
-      .sim-msg{border:1px solid #e6e8ec;border-radius:10px;padding:12px;background:#fff}
+      .sim-msg{border:1px solid #e6e8ec;border-radius:12px;padding:12px;background:#fff}
       .sim-msg .from{font-weight:600}
       .sim-msg .subject{font-style:italic;color:#334155}
       .sim-note{color:#475569;margin-top:.25rem}
-      .sim-good{background:#e8f7ee;border:1px solid #cceedd;color:#0f5132;border-radius:8px;padding:10px}
-      .sim-warn{background:#fff5d6;border:1px solid #ffe7ad;color:#8a6d00;border-radius:8px;padding:10px}
-      .sim-bad{background:#ffe5e5;border:1px solid #ffcccc;color:#842029;border-radius:8px;padding:10px}
+      .sim-good{background:#e8f7ee;border:1px solid #cceedd;color:#0f5132;border-radius:10px;padding:10px}
+      .sim-warn{background:#fff5d6;border:1px solid #ffe7ad;color:#8a6d00;border-radius:10px;padding:10px}
+      .sim-bad{background:#ffe5e5;border:1px solid #ffcccc;color:#842029;border-radius:10px;padding:10px}
+      .pill{display:inline-flex;align-items:center;gap:.35rem;border:1px solid #e6e8ec;border-radius:999px;padding:.15rem .55rem}
     </style>
     """, unsafe_allow_html=True)
 
     st.markdown("## 🧪 Guided simulations (safe, read-only)")
     st.caption("These are examples only. No messages are sent and nothing is stored outside your session.")
 
-    # In-memory results store
+    # In-memory results
     st.session_state.setdefault("sim_results", {})
 
     # -----------------------------
-    # Scenario bank (read-only)
+    # Scenario bank (no angle brackets in 'from')
     # -----------------------------
     SCENARIOS = [
         {
             "id": "phish_invoice",
             "title": "📧 Invoice phish preview",
             "message": {
-                "from": "“Accounts” <accounts@trusted-lookalike.com>",
+                # Avoid <...> to prevent InvalidCharacterError
+                "from": "“Accounts” (accounts@trusted-lookalike.com)",
                 "subject": "Please review the attached invoice ASAP.",
-                "notes": "Look-alike domain & urgency are the hook."
+                "notes": "Look-alike domain + urgency. Hover shows odd link."
             },
             "flags": [
-                ("Display-name spoofing", True),
-                ("Urgent tone / pressure", True),
-                ("Link hover doesn’t match the domain", True),
-                ("Attachment from an unknown sender", True),
-                ("Sent internally from your known finance mailbox", False)
+                ("🚩 Display-name spoofing", True),
+                ("⏱️ Urgent tone / pressure", True),
+                ("🔗 Link hover doesn’t match the domain", True),
+                ("📎 Attachment from an unknown sender", True),
+                ("🏢 Sent internally from your known finance mailbox", False)
             ],
             "actions": {
                 "choices": [
-                    "Open the attachment and check",
-                    "Reply to ask for details",
-                    "Report via the ‘report suspicious’ route",
-                    "Pay it to avoid delays"
+                    "📎 Open the attachment and check",
+                    "↩️ Reply to ask for details",
+                    "🚨 Report via the ‘report suspicious’ route",
+                    "💸 Pay it to avoid delays"
                 ],
                 "correct_index": 2
             },
             "explain": {
-                "why_flags": "Multiple common phish cues show up together.",
-                "why_action": "Use your reporting route; verify invoices via a known back-channel (phone/portal), never by replying."
+                "why_flags": "Common phish cues appear together — urgency, mismatched link, unknown attachment.",
+                "why_action": "Report it, then verify invoices via a known back-channel (phone/portal), not by replying."
             }
         },
         {
@@ -733,25 +735,25 @@ if st.session_state.page == "Simulations":
             "message": {
                 "from": "Unknown number (voice note)",
                 "subject": "Urgent: change beneficiary for today’s payment",
-                "notes": "Authority + urgency; out-of-hours channel change."
+                "notes": "Authority + urgency + new channel out-of-hours."
             },
             "flags": [
-                ("Unfamiliar contact method", True),
-                ("Out-of-hours request", True),
-                ("Asks to bypass normal checks", True),
-                ("Comes from the verified corporate number", False)
+                ("📱 Unfamiliar contact method", True),
+                ("🌙 Out-of-hours request", True),
+                ("🚧 Asks to bypass normal checks", True),
+                ("☎️ Comes from the verified corporate number", False)
             ],
             "actions": {
                 "choices": [
-                    "Do it quickly to help",
-                    "Verify using a known number/back-channel",
-                    "Reply in the same app and ask for confirmation",
-                    "Ignore and delete"
+                    "⚡ Do it quickly to help",
+                    "📞 Verify using a known number / back-channel",
+                    "💬 Reply in the same app and ask for confirmation",
+                    "🗑️ Ignore and delete"
                 ],
                 "correct_index": 1
             },
             "explain": {
-                "why_flags": "Deepfakes mimic tone well; the channel and the ask are the giveaway.",
+                "why_flags": "Deepfakes copy tone; the **channel** and the **ask** are the giveaways.",
                 "why_action": "Pause and verify on a known, trusted route before acting."
             }
         },
@@ -761,26 +763,26 @@ if st.session_state.page == "Simulations":
             "message": {
                 "from": "no-reply@security-notice.com",
                 "subject": "Your account will be locked. Reset password now.",
-                "notes": "Generic greeting and a time-pressure link."
+                "notes": "Generic greeting + time pressure + odd domain."
             },
             "flags": [
-                ("Generic greeting / no personalisation", True),
-                ("Domain mismatch vs your real provider", True),
-                ("Push to click immediately", True),
-                ("Uses your IT’s known help portal URL", False)
+                ("👋 Generic greeting / no personalisation", True),
+                ("🌐 Domain mismatch vs your real provider", True),
+                ("👉 Push to click immediately", True),
+                ("🛠️ Uses your IT’s known help portal URL", False)
             ],
             "actions": {
                 "choices": [
-                    "Click the link and reset",
-                    "Go directly to the site or use IT’s known portal",
-                    "Forward the link to colleagues",
-                    "Ignore all security emails"
+                    "🔗 Click the link and reset",
+                    "🧭 Go directly to the site or use IT’s known portal",
+                    "📨 Forward the link to colleagues",
+                    "🙈 Ignore all security emails"
                 ],
                 "correct_index": 1
             },
             "explain": {
-                "why_flags": "Legitimate resets don’t demand instant clicks from odd domains.",
-                "why_action": "If in doubt, navigate yourself to the real site or use your IT’s known route."
+                "why_flags": "Legit resets don’t demand instant clicks from unfamiliar domains.",
+                "why_action": "Navigate yourself to the real site or use your IT’s known route."
             }
         }
     ]
@@ -793,32 +795,33 @@ if st.session_state.page == "Simulations":
         res = st.session_state["sim_results"].get(sid, {})
 
         with st.expander(scn["title"], expanded=not bool(res)):
-            # Fake message pane (escape to avoid invalid HTML)
-            frm = html.escape(scn["message"]["from"])
-            subj = html.escape(scn["message"]["subject"])
+            # Fake message pane (escape just in case)
+            frm   = html.escape(scn["message"]["from"])
+            subj  = html.escape(scn["message"]["subject"])
             notes = html.escape(scn["message"]["notes"])
             st.markdown(
                 f"<div class='sim-msg'>"
-                f"<div class='from'>From: {frm}</div>"
-                f"<div class='subject'>{subj}</div>"
-                f"<div class='sim-note'>{notes}</div>"
+                f"<div class='from'>📥 <b>From:</b> {frm}</div>"
+                f"<div class='subject'>✉️ <i>{subj}</i></div>"
+                f"<div class='sim-note'>📝 {notes}</div>"
                 f"</div>",
                 unsafe_allow_html=True
             )
 
-            st.markdown("**What to look for** *(tick all the red flags)*")
+            st.markdown("**👀 What to look for** *(tick all the red flags)*")
             cols = st.columns(2)
             chosen_flags = []
             for i, (label, _) in enumerate(scn["flags"]):
                 with cols[i % 2]:
                     chosen_flags.append(
                         st.checkbox(
-                            label, key=f"{sid}_flag_{i}",
+                            label,
+                            key=f"{sid}_flag_{i}",
                             value=res.get("flags", {}).get(i, False)
                         )
                     )
 
-            st.markdown("**What would you do?**")
+            st.markdown("**🧭 What would you do?**")
             action_choice = st.radio(
                 "Choose the best next step:",
                 scn["actions"]["choices"],
@@ -828,13 +831,13 @@ if st.session_state.page == "Simulations":
             )
 
             conf = st.slider(
-                "How confident were you?",
+                "🤔 How confident were you?",
                 0, 100, value=res.get("confidence", 60),
                 key=f"{sid}_conf"
             )
 
             # Save / reveal
-            if st.button("Check my answers", key=f"{sid}_check"):
+            if st.button("✅ Check my answers", key=f"{sid}_check"):
                 picked = {i: bool(ch) for i, ch in enumerate(chosen_flags)}
                 correct_flags = {i: ok for i, (_, ok) in enumerate(scn["flags"])}
                 action_index = scn["actions"]["choices"].index(action_choice)
@@ -852,40 +855,40 @@ if st.session_state.page == "Simulations":
                     "score": int(pct)
                 }
 
-            # Feedback panel if we have results
+            # Feedback
             res = st.session_state["sim_results"].get(sid, {})
             if res:
                 correct_flags = [lbl for (lbl, ok) in scn["flags"] if ok]
-                wrong_flags = [lbl for (lbl, ok) in scn["flags"] if not ok]
+                not_flags     = [lbl for (lbl, ok) in scn["flags"] if not ok]
                 correct_action = scn["actions"]["choices"][scn["actions"]["correct_index"]]
-                picked_action = scn["actions"]["choices"][res["action_index"]]
+                picked_action  = scn["actions"]["choices"][res["action_index"]]
                 good = res["score"] >= 70
                 klass = "sim-good" if good else "sim-warn" if res["score"] >= 40 else "sim-bad"
 
-                st.markdown(f"<div class='{klass}'><b>Score:</b> {res['score']}%</div>", unsafe_allow_html=True)
-                st.markdown("**Correct red flags**")
+                st.markdown(f"<div class='{klass}'><b>📊 Score:</b> {res['score']}%</div>", unsafe_allow_html=True)
+                st.markdown("**✔️ Correct red flags**")
                 st.markdown("• " + "  \n• ".join(correct_flags))
-                if wrong_flags:
-                    st.markdown("**Not red flags in this scenario**")
-                    st.markdown("• " + "  \n• ".join(wrong_flags))
-                st.markdown("**Best next step**")
+                if not_flags:
+                    st.markdown("**🚫 Not red flags in this scenario**")
+                    st.markdown("• " + "  \n• ".join(not_flags))
+                st.markdown("**🏁 Best next step**")
                 st.markdown(f"- ✅ {correct_action}")
                 if picked_action != correct_action:
                     st.markdown(f"- You chose: {picked_action}")
 
-                st.markdown(f"**Why the flags matter:** {scn['explain']['why_flags']}")
-                st.markdown(f"**Why this action:** {scn['explain']['why_action']}")
+                st.markdown(f"**💡 Why the flags matter:** {scn['explain']['why_flags']}")
+                st.markdown(f"**🧠 Why this action:** {scn['explain']['why_action']}")
 
-    # Render all scenarios
+    # Render scenarios
     for scn in SCENARIOS:
         render_quiz(scn)
 
-    # Cumulative score (if any finished)
+    # Cumulative score
     if st.session_state["sim_results"]:
-        scores = [v["score"] for v in st.session_state["sim_results"].values() if "score" in v]
+        scores = [v.get("score", 0) for v in st.session_state["sim_results"].values() if "score" in v]
         if scores:
             avg = sum(scores) / len(scores)
-            st.markdown(f"### 🧮 Average simulation score: **{avg:.0f}%**")
+            st.markdown(f"<span class='pill'>🧮 <b>Average simulation score:</b> {avg:.0f}%</span>", unsafe_allow_html=True)
 
     c1, c2 = st.columns(2)
     with c1:
